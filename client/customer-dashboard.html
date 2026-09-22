@@ -705,10 +705,47 @@
             cursor: pointer;
         }
 
-        .wishlist-btn-top:hover, .wishlist-btn-top.active {
+        .wishlist-btn-top:hover {
             color: #DC2626;
             background: var(--white);
             transform: scale(1.1);
+        }
+
+        .wishlist-btn-top.active {
+            color: #DC2626 !important;
+            background: #FFF1F2 !important;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
+            transform: scale(1.1);
+        }
+
+        .wishlist-btn-top.active i {
+            color: #DC2626 !important;
+            font-weight: 900 !important;
+        }
+
+        .btn-remove-wishlist {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 12px;
+            border-radius: var(--radius-pill);
+            background: #FFF1F2;
+            color: #E11D48;
+            border: 1px solid #FECDD3;
+            font-size: 11.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--t-fast);
+            margin-top: 6px;
+            width: 100%;
+        }
+
+        .btn-remove-wishlist:hover {
+            background: #FFE4E6;
+            color: #BE123C;
+            border-color: #FDA4AF;
+            transform: translateY(-1px);
         }
 
         .product-card-body {
@@ -1770,6 +1807,7 @@
             <a href="#" data-page="wishlist">
                 <i class="far fa-heart"></i>
                 <span>Wishlist</span>
+                <span class="nav-badge-orange" id="wishlist-count-badge" style="display:none; margin-left:auto;">0</span>
             </a>
             <a href="#" onclick="cart.toggle(); return false;">
                 <i class="fas fa-shopping-basket"></i>
@@ -2219,10 +2257,20 @@
 
             <!-- PAGE: WISHLIST -->
             <div id="page-wishlist" class="page-content">
-                <div class="section-box-header" style="margin-bottom:20px;">
+                <div class="orders-page-header" style="margin-bottom:24px;">
                     <div>
-                        <h2 style="font-family:var(--font-serif); font-size:24px; color:var(--text-dark);">My Saved Produce Wishlist</h2>
-                        <p style="font-size:13px; color:var(--text-muted);">Products you saved for future farm orders.</p>
+                        <div class="orders-breadcrumbs">
+                            <a href="#" onclick="customer.showPage('dashboard'); return false;">Home</a>
+                            <i class="fas fa-chevron-right" style="font-size:10px;"></i>
+                            <span>My Wishlist</span>
+                        </div>
+                        <h1 class="orders-page-title">My Saved Produce</h1>
+                        <p class="orders-page-subtitle">Your curated collection of favorite organic farm produce. Easily reorder or add to cart.</p>
+                    </div>
+                    <div class="orders-header-actions">
+                        <button class="btn-order-action primary" onclick="customer.showPage('browse')" style="padding:10px 20px; font-size:13px;">
+                            <i class="fas fa-store"></i> Browse Fresh Produce
+                        </button>
                     </div>
                 </div>
 

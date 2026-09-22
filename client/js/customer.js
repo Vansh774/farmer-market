@@ -10,6 +10,7 @@ const customer = {
     ordersFilter: 'all',
     ordersSearchQuery: '',
     ordersViewMode: 'cards',
+    wishlistProductIds: new Set(),
 
     fallbackProducts: [],
 
@@ -43,6 +44,7 @@ const customer = {
         this.setupUploadAreas();
         this.patchCartBadge();
         this.setupRealtimeOrderSync();
+        this.fetchWishlistIds();
 
         // Handle URL parameters (e.g. ?page=orders, ?search=..., ?category=...)
         const urlParams = new URLSearchParams(window.location.search);
@@ -360,9 +362,12 @@ const customer = {
             quantity: product.quantity || 999
         }).replace(/'/g, "&#39;");
 
+        const isWishlisted = this.wishlistProductIds ? this.wishlistProductIds.has(Number(product.id)) : false;
+        const isWishlistPage = !!options.isWishlistPage;
+
         // Navigate to product-detail on click unless button was clicked
         card.addEventListener('click', (e) => {
-            if (e.target.closest('.btn-add-cart-card') || e.target.closest('.wishlist-btn-top')) {
+            if (e.target.closest('.btn-add-cart-card') || e.target.closest('.wishlist-btn-top') || e.target.closest('.btn-remove-wishlist')) {
                 return;
             }
             window.location.href = `product-detail.html?id=${product.id}`;
@@ -371,8 +376,8 @@ const customer = {
         card.innerHTML = `
             <div class="product-card-top">
                 <img src="${imgUrl || fallback}" alt="${product.name}" loading="lazy" onerror="this.onerror=null;this.src='${fallback}';">
-                <button class="wishlist-btn-top" onclick="event.stopPropagation(); customer.toggleWishlist(${product.id})" title="Save to wishlist">
-                    <i class="far fa-heart"></i>
+                <button class="wishlist-btn-top ${isWishlisted ? 'active' : ''}" data-product-id="${product.id}" onclick="event.stopPropagation(); customer.toggleWishlist(${product.id})" title="${isWishlisted ? 'Remove from wishlist' : 'Save to wishlist'}">
+                    <i class="${isWishlisted ? 'fas' : 'far'} fa-heart"></i>
                 </button>
             </div>
             <div class="product-card-body">
@@ -382,6 +387,10 @@ const customer = {
                 <button class="btn-add-cart-card" onclick='event.stopPropagation(); customer.addToCart(this, ${pData})'>
                     <i class="fas fa-shopping-basket"></i> Add to Cart
                 </button>
+                ${isWishlistPage ? `
+                <button class="btn-remove-wishlist" onclick="event.stopPropagation(); customer.removeFromWishlist(${product.id})" title="Remove from wishlist">
+                    <i class="fas fa-trash-alt"></i> Remove from Wishlist
+                </button>` : ''}
             </div>
         `;
         return card;
@@ -434,43 +443,135 @@ const customer = {
     // ============================================
     // WISHLIST
     // ============================================
-    async loadWishlist() {
+    async fetchWishlistIds() {
+        try {
+            const data = await API.user.getWishlist();
+            if (data && data.success && Array.isArray(data.wishlist)) {
+                this.wishlistProductIds = new Set(data.wishlist.map(w => Number(w.product_id || w.id)));
+                this.updateWishlistBadge();
+                this.syncAllWishlistButtons();
+            }
+        } catch (e) {
+            console.warn('Error fetching wishlist IDs:', e);
+        }
+    },
+
+    updateWishlistBadge() {
+        const badge = document.getElementById('wishlist-count-badge');
+        if (badge) {
+            const count = this.wishlistProductIds ? this.wishlistProductIds.size : 0;
+            badge.textContent = count;
+            badge.style.display = count > 0 ? 'inline-flex' : 'none';
+        }
+    },
+
+    syncAllWishlistButtons() {
+        document.querySelectorAll('.wishlist-btn-top[data-product-id]').forEach(btn => {
+            const pid = Number(btn.dataset.productId);
+            const isWishlisted = this.wishlistProductIds ? this.wishlistProductIds.has(pid) : false;
+            btn.classList.toggle('active', isWishlisted);
+            btn.title = isWishlisted ? 'Remove from wishlist' : 'Save to wishlist';
+            const icon = btn.querySelector('i');
+            if (icon) {
+                icon.className = isWishlisted ? 'fas fa-heart' : 'far fa-heart';
+            }
+        });
+        this.updateWishlistBadge();
+    },
+
+    updateWishlistButtons(productId, isWishlisted) {
+        const numId = Number(productId);
+        document.querySelectorAll(`.wishlist-btn-top[data-product-id="${numId}"]`).forEach(btn => {
+            btn.classList.toggle('active', isWishlisted);
+            btn.title = isWishlisted ? 'Remove from wishlist' : 'Save to wishlist';
+            const icon = btn.querySelector('i');
+            if (icon) {
+                icon.className = isWishlisted ? 'fas fa-heart' : 'far fa-heart';
+            }
+        });
+        this.updateWishlistBadge();
+    },
+
+    async loadWishlist(silent = false) {
         const grid = document.getElementById('wishlist-grid');
         if (!grid) return;
-        grid.innerHTML = '<p style="text-align:center; padding:30px; color:var(--text-muted); grid-column:1/-1;">Loading wishlist...</p>';
+        
+        if (!silent) {
+            grid.innerHTML = '<p style="text-align:center; padding:30px; color:var(--text-muted); grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Loading wishlist...</p>';
+        }
 
         try {
             const data = await API.user.getWishlist();
             if (data && data.success && Array.isArray(data.wishlist) && data.wishlist.length > 0) {
+                this.wishlistProductIds = new Set(data.wishlist.map(w => Number(w.product_id || w.id)));
+                this.updateWishlistBadge();
+                this.syncAllWishlistButtons();
+                
                 grid.innerHTML = '';
                 data.wishlist.forEach(item => {
                     grid.appendChild(this.createProductCard({
-                        id: item.product_id,
-                        name: item.product_name,
+                        id: item.product_id || item.id,
+                        name: item.product_name || item.name,
                         price: item.price,
                         image_url: item.image_url,
                         farmer_name: item.farmer_name
-                    }));
+                    }, { isWishlistPage: true }));
                 });
             } else {
-                grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-muted);">
-                    <i class="far fa-heart" style="font-size:40px; color:var(--orange); margin-bottom:12px;"></i>
-                    <h3 style="font-family:var(--font-serif); font-size:20px; color:var(--text-dark);">Your wishlist is empty</h3>
-                    <p style="font-size:13px; margin-top:4px;">Click the heart icon on produce cards to save your favorites!</p>
-                </div>`;
+                this.wishlistProductIds = new Set();
+                this.updateWishlistBadge();
+                this.syncAllWishlistButtons();
+                grid.innerHTML = `
+                    <div style="grid-column:1/-1; text-align:center; padding:60px 20px; background:white; border-radius:18px; border:1px dashed var(--beige-mid);">
+                        <div style="width:70px; height:70px; background:#FFF1F2; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; color:#E11D48; font-size:28px;">
+                            <i class="far fa-heart"></i>
+                        </div>
+                        <h3 style="font-family:var(--font-serif); font-size:22px; color:var(--text-dark); margin-bottom:8px;">Your wishlist is empty</h3>
+                        <p style="font-size:13.5px; color:var(--text-muted); max-width:420px; margin:0 auto 20px;">
+                            Click the heart icon on any fresh produce card to save it to your wishlist for later.
+                        </p>
+                        <button class="btn-order-action primary" onclick="customer.showPage('browse')">
+                            <i class="fas fa-store"></i> Browse Fresh Produce
+                        </button>
+                    </div>`;
             }
         } catch (error) {
+            console.error('Error loading wishlist:', error);
             grid.innerHTML = '<p style="text-align:center; padding:30px; color:var(--text-muted); grid-column:1/-1;">No wishlist items saved yet</p>';
         }
     },
 
-    async toggleWishlist(productId) {
+    async removeFromWishlist(productId) {
+        const numId = Number(productId);
         try {
-            await API.user.addToWishlist(productId);
+            await API.user.removeFromWishlist(numId);
+        } catch (err) {
+            console.warn('Remove wishlist error:', err);
+        }
+        if (this.wishlistProductIds) this.wishlistProductIds.delete(numId);
+        this.updateWishlistButtons(numId, false);
+        if (typeof toast !== 'undefined') toast.info('Removed from wishlist');
+        this.loadWishlist(true);
+    },
+
+    async toggleWishlist(productId) {
+        const numId = Number(productId);
+        const isWishlisted = this.wishlistProductIds ? this.wishlistProductIds.has(numId) : false;
+
+        if (isWishlisted) {
+            await this.removeFromWishlist(numId);
+        } else {
+            try {
+                await API.user.addToWishlist(numId);
+            } catch (err) {
+                console.warn('Add wishlist error:', err);
+            }
+            if (this.wishlistProductIds) this.wishlistProductIds.add(numId);
+            this.updateWishlistButtons(numId, true);
             if (typeof toast !== 'undefined') toast.success('Added to wishlist! ❤️');
-            this.loadWishlist();
-        } catch (error) {
-            if (typeof toast !== 'undefined') toast.success('Saved to wishlist! ❤️');
+            if (this.currentPage === 'wishlist') {
+                this.loadWishlist(true);
+            }
         }
     },
 
