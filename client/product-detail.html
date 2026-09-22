@@ -2252,7 +2252,6 @@ async function toggleWishlistCurrent() {
             await API.user.removeFromWishlist(pid);
             productDetail.isWishlisted = false;
             productDetail.updateWishlistUI();
-            toast.info('Removed from Wishlist');
         } catch (e) {
             productDetail.isWishlisted = false;
             productDetail.updateWishlistUI();
@@ -2262,11 +2261,9 @@ async function toggleWishlistCurrent() {
             await API.user.addToWishlist(pid);
             productDetail.isWishlisted = true;
             productDetail.updateWishlistUI();
-            toast.success('Added to your Wishlist! ❤️');
         } catch (e) {
             productDetail.isWishlisted = true;
             productDetail.updateWishlistUI();
-            toast.success('Saved in Wishlist! ❤️');
         }
     }
 }

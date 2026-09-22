@@ -550,7 +550,6 @@ const customer = {
         }
         if (this.wishlistProductIds) this.wishlistProductIds.delete(numId);
         this.updateWishlistButtons(numId, false);
-        if (typeof toast !== 'undefined') toast.info('Removed from wishlist');
         this.loadWishlist(true);
     },
 
@@ -568,7 +567,6 @@ const customer = {
             }
             if (this.wishlistProductIds) this.wishlistProductIds.add(numId);
             this.updateWishlistButtons(numId, true);
-            if (typeof toast !== 'undefined') toast.success('Added to wishlist! ❤️');
             if (this.currentPage === 'wishlist') {
                 this.loadWishlist(true);
             }
