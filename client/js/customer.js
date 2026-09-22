@@ -339,7 +339,7 @@ const customer = {
         }
     },
 
-    createProductCard(product) {
+    createProductCard(product, options = {}) {
         const card = document.createElement('div');
         card.className = 'product-card';
         card.style.cursor = 'pointer';
