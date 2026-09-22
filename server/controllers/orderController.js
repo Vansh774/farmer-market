@@ -360,11 +360,18 @@ const updateOrderStatus = async (req, res) => {
 
         const order = orders[0];
 
-        // Update order status
-        await pool.query(
-            'UPDATE orders SET status = ? WHERE id = ?',
-            [status, orderId]
-        );
+        // Update order status (and mark paid if delivered)
+        if (status === 'delivered') {
+            await pool.query(
+                "UPDATE orders SET status = ?, payment_status = 'paid' WHERE id = ?",
+                [status, orderId]
+            );
+        } else {
+            await pool.query(
+                'UPDATE orders SET status = ? WHERE id = ?',
+                [status, orderId]
+            );
+        }
 
         // Insert status history
         await pool.query(
@@ -387,6 +394,25 @@ const updateOrderStatus = async (req, res) => {
                 'INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, ?)',
                 [order.customer_id, 'Order Update', statusMessages[status], 'order']
             ).catch(() => {});
+        }
+
+        // Broadcast real-time Socket.io events
+        try {
+            const io = req.app.get('io');
+            if (io) {
+                const eventPayload = {
+                    orderId: parseInt(orderId),
+                    order_number: order.order_number,
+                    status,
+                    note: note || statusMessages[status] || 'Status updated',
+                    customerId: order.customer_id,
+                    timestamp: new Date().toISOString()
+                };
+                io.to(`order_${orderId}`).emit('status_updated', eventPayload);
+                io.emit('order_status_changed', eventPayload);
+            }
+        } catch (e) {
+            console.warn('Socket broadcast error in updateOrderStatus:', e.message);
         }
 
         // Log activity

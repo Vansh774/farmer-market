@@ -429,7 +429,11 @@ const updateDeliveryStatus = async (req, res) => {
         }
 
         // Update orders table
-        await pool.query('UPDATE orders SET status = ? WHERE id = ?', [newOrderStatus, a.order_id]);
+        if (isDelivered) {
+            await pool.query("UPDATE orders SET status = ?, payment_status = 'paid' WHERE id = ?", [newOrderStatus, a.order_id]);
+        } else {
+            await pool.query('UPDATE orders SET status = ? WHERE id = ?', [newOrderStatus, a.order_id]);
+        }
 
         // Insert into order_status_history
         const noteMap = {
@@ -465,6 +469,19 @@ const updateDeliveryStatus = async (req, res) => {
             note: noteMap[status],
             timestamp: new Date().toISOString()
         });
+
+        try {
+            const io = req.app.get('io');
+            if (io) {
+                io.emit('order_status_changed', {
+                    orderId: a.order_id,
+                    status: newOrderStatus,
+                    delivery_status: status,
+                    customerId: a.customer_id,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        } catch (e) {}
 
         if (isDelivered) {
             emitOrderUpdate(req, a.order_id, 'delivery_completed', {

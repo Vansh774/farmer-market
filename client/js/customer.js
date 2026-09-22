@@ -42,6 +42,7 @@ const customer = {
         this.setupNavigation();
         this.setupUploadAreas();
         this.patchCartBadge();
+        this.setupRealtimeOrderSync();
 
         // Handle URL parameters (e.g. ?page=orders, ?search=..., ?category=...)
         const urlParams = new URLSearchParams(window.location.search);
@@ -477,17 +478,64 @@ const customer = {
     // ORDERS & TRACKING
     // ============================================
     currentTrackedOrderId: null,
+    _trackingPollTimer: null,
+    _orderSyncInterval: null,
+    _globalSocket: null,
 
-    async loadOrders() {
+    setupRealtimeOrderSync() {
+        try {
+            if (typeof io !== 'undefined' && !this._globalSocket) {
+                this._globalSocket = io('http://localhost:5000');
+                
+                this._globalSocket.on('order_status_changed', (data) => {
+                    const user = auth.getCurrentUser();
+                    if (user && data && (data.customerId == user.id || !data.customerId)) {
+                        if (this.currentPage === 'orders') {
+                            this.loadOrders(true);
+                        }
+                        if (this.currentTrackedOrderId && this.currentTrackedOrderId == data.orderId) {
+                            this.openOrderTrackingModal(this.currentTrackedOrderId, true);
+                        }
+                        if (typeof toast !== 'undefined' && data.status) {
+                            toast.info(`Order #${data.order_number || data.orderId} status: ${data.status.replace(/_/g, ' ').toUpperCase()} 🌾`);
+                        }
+                    }
+                });
+
+                this._globalSocket.on('status_updated', (data) => {
+                    if (this.currentTrackedOrderId && this.currentTrackedOrderId == data.orderId) {
+                        this.openOrderTrackingModal(this.currentTrackedOrderId, true);
+                    }
+                    if (this.currentPage === 'orders') {
+                        this.loadOrders(true);
+                    }
+                });
+            }
+        } catch (err) {
+            console.warn('Socket.io client sync init:', err.message);
+        }
+
+        if (!this._orderSyncInterval) {
+            this._orderSyncInterval = setInterval(() => {
+                if (this.currentPage === 'orders') {
+                    this.loadOrders(true);
+                }
+            }, 8000);
+        }
+    },
+
+    async loadOrders(silent = false) {
         const container = document.getElementById('customer-orders');
         if (!container) return;
         
-        container.innerHTML = `
-            <div style="text-align:center; padding:60px 20px; color:var(--text-muted);">
-                <i class="fas fa-spinner fa-spin" style="font-size:28px; margin-bottom:14px; color:var(--green-primary); display:block;"></i>
-                <div style="font-family:var(--font-serif); font-size:18px; color:var(--text-dark); margin-bottom:6px;">Loading your farm orders...</div>
-                <p style="font-size:13px;">Fetching the freshest status from our local growers.</p>
-            </div>`;
+        if (!silent && (!this.allOrders || this.allOrders.length === 0)) {
+            container.innerHTML = `
+                <div style="text-align:center; padding:60px 20px; color:var(--text-muted);">
+                    <i class="fas fa-spinner fa-spin" style="font-size:28px; margin-bottom:14px; color:var(--green-primary); display:block;"></i>
+                    <div style="font-family:var(--font-serif); font-size:18px; color:var(--text-dark); margin-bottom:6px;">Loading your farm orders...</div>
+                    <p style="font-size:13px;">Fetching the freshest status from our local growers.</p>
+                </div>`;
+        }
 
         try {
             const data = await API.orders.getCustomerOrders();
@@ -496,15 +544,17 @@ const customer = {
             this.renderOrders();
         } catch (error) {
             console.error('Error loading orders:', error);
-            container.innerHTML = `
-                <div style="text-align:center; padding:50px 20px; background:white; border-radius:16px; border:1px solid var(--beige-mid);">
-                    <i class="fas fa-exclamation-triangle" style="font-size:36px; color:#DC2626; margin-bottom:12px;"></i>
-                    <h3 style="font-family:var(--font-serif); font-size:20px; color:var(--text-dark); margin-bottom:6px;">Failed to load orders</h3>
-                    <p style="font-size:13px; color:var(--text-muted); margin-bottom:18px;">We couldn't connect to retrieve your order history right now.</p>
-                    <button class="btn-order-action primary" onclick="customer.loadOrders()">
-                        <i class="fas fa-rotate-right"></i> Try Again
-                    </button>
-                </div>`;
+            if (!silent) {
+                container.innerHTML = `
+                    <div style="text-align:center; padding:50px 20px; background:white; border-radius:16px; border:1px solid var(--beige-mid);">
+                        <i class="fas fa-exclamation-triangle" style="font-size:36px; color:#DC2626; margin-bottom:12px;"></i>
+                        <h3 style="font-family:var(--font-serif); font-size:20px; color:var(--text-dark); margin-bottom:6px;">Failed to load orders</h3>
+                        <p style="font-size:13px; color:var(--text-muted); margin-bottom:18px;">We couldn't connect to retrieve your order history right now.</p>
+                        <button class="btn-order-action primary" onclick="customer.loadOrders()">
+                            <i class="fas fa-rotate-right"></i> Try Again
+                        </button>
+                    </div>`;
+            }
         }
     },
 
@@ -934,41 +984,50 @@ const customer = {
         return this.openOrderTrackingModal(orderId);
     },
 
-    async openOrderTrackingModal(orderId) {
-        // Automatically close all other modals first
-        this.closeAllCustomerModals();
+    async openOrderTrackingModal(orderId, silent = false) {
+        // Automatically close all other modals first if opening fresh
+        if (!silent) {
+            this.closeAllCustomerModals();
+        }
 
         this.currentTrackedOrderId = orderId;
         const modal = document.getElementById('order-tracking-modal');
         if (!modal) return;
 
-        // Reset to clean loading state (NO placeholder / dummy data)
         const titleEl = document.getElementById('track-order-title');
-        if (titleEl) titleEl.textContent = `Order #${orderId}`;
-
         const dateEl = document.getElementById('track-order-date');
-        if (dateEl) dateEl.textContent = 'Loading order date...';
-
         const statusEl = document.getElementById('track-current-status-text');
-        if (statusEl) statusEl.textContent = 'Fetching status...';
-
         const addrEl = document.getElementById('track-shipping-address');
-        if (addrEl) addrEl.textContent = 'Loading destination...';
-
         const totalEl = document.getElementById('track-total-amount');
-        if (totalEl) totalEl.textContent = 'Calculating...';
-
         const stepperEl = document.getElementById('tracking-stepper');
-        if (stepperEl) stepperEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading tracking details...</div>';
-
         const itemsListEl = document.getElementById('track-items-list');
-        if (itemsListEl) itemsListEl.innerHTML = '';
-
         const historyLogsEl = document.getElementById('track-history-logs');
-        if (historyLogsEl) historyLogsEl.innerHTML = '';
 
-        modal.classList.add('open');
-        document.body.style.overflow = 'hidden';
+        // Only show loading placeholders on initial modal open
+        if (!silent) {
+            if (titleEl) titleEl.textContent = `Order #${orderId}`;
+            if (dateEl) dateEl.textContent = 'Loading order date...';
+            if (statusEl) statusEl.textContent = 'Fetching status...';
+            if (addrEl) addrEl.textContent = 'Loading destination...';
+            if (totalEl) totalEl.textContent = 'Calculating...';
+            if (stepperEl) stepperEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading tracking details...</div>';
+            if (itemsListEl) itemsListEl.innerHTML = '';
+            if (historyLogsEl) historyLogsEl.innerHTML = '';
+
+            modal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+
+            // Auto-poll tracking progress while modal stays open
+            if (this._trackingPollTimer) clearInterval(this._trackingPollTimer);
+            this._trackingPollTimer = setInterval(() => {
+                if (this.currentTrackedOrderId === orderId && modal.classList.contains('open')) {
+                    this.openOrderTrackingModal(orderId, true);
+                } else {
+                    clearInterval(this._trackingPollTimer);
+                    this._trackingPollTimer = null;
+                }
+            }, 3500);
+        }
 
         try {
             const [orderRes, historyRes] = await Promise.all([
@@ -1344,7 +1403,7 @@ const customer = {
 
     refreshCurrentTracking() {
         if (this.currentTrackedOrderId) {
-            this.showOrderTracking(this.currentTrackedOrderId);
+            this.openOrderTrackingModal(this.currentTrackedOrderId, true);
             if (typeof toast !== 'undefined') toast.info('Tracking timeline refreshed from MySQL');
         }
     },
@@ -1387,12 +1446,18 @@ const customer = {
     },
 
     closeOrderTrackingModal() {
+        if (this._trackingPollTimer) {
+            clearInterval(this._trackingPollTimer);
+            this._trackingPollTimer = null;
+        }
+        this.currentTrackedOrderId = null;
         const modal = document.getElementById('order-tracking-modal');
         if (modal) {
             modal.classList.remove('open');
             modal.style.display = '';
         }
         this.checkRestoreBodyScroll();
+        this.loadOrders(true); // Smoothly refresh the orders list and KPIs
     },
 
     closeTrackingModal() {
