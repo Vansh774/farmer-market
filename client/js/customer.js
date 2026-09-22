@@ -6,6 +6,10 @@ const customer = {
     pageSize: 8,
     totalProducts: 0,
     activeCategory: '',
+    allOrders: [],
+    ordersFilter: 'all',
+    ordersSearchQuery: '',
+    ordersViewMode: 'cards',
 
     fallbackProducts: [],
 
@@ -477,59 +481,452 @@ const customer = {
     async loadOrders() {
         const container = document.getElementById('customer-orders');
         if (!container) return;
-        container.innerHTML = '<p style="text-align:center; padding:30px; color:var(--text-muted);">Loading orders...</p>';
+        
+        container.innerHTML = `
+            <div style="text-align:center; padding:60px 20px; color:var(--text-muted);">
+                <i class="fas fa-spinner fa-spin" style="font-size:28px; margin-bottom:14px; color:var(--green-primary); display:block;"></i>
+                <div style="font-family:var(--font-serif); font-size:18px; color:var(--text-dark); margin-bottom:6px;">Loading your farm orders...</div>
+                <p style="font-size:13px;">Fetching the freshest status from our local growers.</p>
+            </div>`;
 
         try {
             const data = await API.orders.getCustomerOrders();
-            if (data && data.success && Array.isArray(data.orders) && data.orders.length > 0) {
-                container.innerHTML = `<table class="orders-table">
+            this.allOrders = (data && data.success && Array.isArray(data.orders)) ? data.orders : [];
+            this.updateOrdersKPIs();
+            this.renderOrders();
+        } catch (error) {
+            console.error('Error loading orders:', error);
+            container.innerHTML = `
+                <div style="text-align:center; padding:50px 20px; background:white; border-radius:16px; border:1px solid var(--beige-mid);">
+                    <i class="fas fa-exclamation-triangle" style="font-size:36px; color:#DC2626; margin-bottom:12px;"></i>
+                    <h3 style="font-family:var(--font-serif); font-size:20px; color:var(--text-dark); margin-bottom:6px;">Failed to load orders</h3>
+                    <p style="font-size:13px; color:var(--text-muted); margin-bottom:18px;">We couldn't connect to retrieve your order history right now.</p>
+                    <button class="btn-order-action primary" onclick="customer.loadOrders()">
+                        <i class="fas fa-rotate-right"></i> Try Again
+                    </button>
+                </div>`;
+        }
+    },
+
+    updateOrdersKPIs() {
+        const total = this.allOrders.length;
+        const active = this.allOrders.filter(o => ['pending', 'confirmed', 'processing', 'packed', 'out_for_delivery', 'on_the_way'].includes(o.status)).length;
+        const delivered = this.allOrders.filter(o => o.status === 'delivered').length;
+        const cancelled = this.allOrders.filter(o => o.status === 'cancelled').length;
+        const totalSpent = this.allOrders.reduce((sum, o) => {
+            return o.status !== 'cancelled' ? sum + parseFloat(o.total_amount || 0) : sum;
+        }, 0);
+
+        const setEl = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        };
+
+        setEl('stat-order-total', total);
+        setEl('stat-order-active', active);
+        setEl('stat-order-delivered', delivered);
+        setEl('stat-order-spent', `₹${totalSpent.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+
+        setEl('tab-count-all', total);
+        setEl('tab-count-active', active);
+        setEl('tab-count-delivered', delivered);
+        setEl('tab-count-cancelled', cancelled);
+    },
+
+    filterOrders(filter) {
+        this.ordersFilter = filter;
+        document.querySelectorAll('.order-tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.filter === filter);
+        });
+        this.renderOrders();
+    },
+
+    handleOrderSearch(query) {
+        this.ordersSearchQuery = (query || '').trim().toLowerCase();
+        const clearBtn = document.getElementById('orders-search-clear');
+        if (clearBtn) clearBtn.style.display = this.ordersSearchQuery ? 'block' : 'none';
+        this.renderOrders();
+    },
+
+    clearOrderSearch() {
+        const input = document.getElementById('orders-search-input');
+        if (input) input.value = '';
+        this.ordersSearchQuery = '';
+        const clearBtn = document.getElementById('orders-search-clear');
+        if (clearBtn) clearBtn.style.display = 'none';
+        this.renderOrders();
+    },
+
+    setOrdersView(mode) {
+        this.ordersViewMode = mode;
+        const cardsBtn = document.getElementById('view-btn-cards');
+        const tableBtn = document.getElementById('view-btn-table');
+        if (cardsBtn) cardsBtn.classList.toggle('active', mode === 'cards');
+        if (tableBtn) tableBtn.classList.toggle('active', mode === 'table');
+        this.renderOrders();
+    },
+
+    getOrderStatusMeta(status) {
+        const s = (status || 'pending').toLowerCase();
+        switch (s) {
+            case 'delivered':
+                return { label: 'Delivered', icon: 'fas fa-check-circle', pillClass: 'delivered' };
+            case 'confirmed':
+                return { label: 'Confirmed', icon: 'fas fa-circle-check', pillClass: 'confirmed' };
+            case 'processing':
+            case 'packed':
+                return { label: 'Processing & Packed', icon: 'fas fa-box', pillClass: 'processing' };
+            case 'out_for_delivery':
+            case 'on_the_way':
+                return { label: 'Out for Delivery', icon: 'fas fa-truck-fast', pillClass: 'out_for_delivery' };
+            case 'cancelled':
+                return { label: 'Cancelled', icon: 'fas fa-circle-xmark', pillClass: 'cancelled' };
+            case 'pending':
+            default:
+                return { label: 'Order Placed', icon: 'fas fa-clock', pillClass: 'pending' };
+        }
+    },
+
+    getProduceFallback(name) {
+        const n = (name || '').toLowerCase();
+        if (n.includes('apple') || n.includes('fruit') || n.includes('berry') || n.includes('mango') || n.includes('banana') || n.includes('orange')) {
+            return 'assets/images/hero-produce.png';
+        }
+        if (n.includes('carrot') || n.includes('root') || n.includes('potato') || n.includes('onion') || n.includes('beet')) {
+            return 'assets/images/carrots.png';
+        }
+        if (n.includes('spinach') || n.includes('green') || n.includes('kale') || n.includes('lettuce') || n.includes('herb') || n.includes('mint')) {
+            return 'assets/images/spinach.png';
+        }
+        return 'assets/images/tomatoes.png';
+    },
+
+    renderOrders() {
+        const container = document.getElementById('customer-orders');
+        if (!container) return;
+
+        // Filter list by selected tab
+        let list = this.allOrders;
+        if (this.ordersFilter === 'active') {
+            list = list.filter(o => ['pending', 'confirmed', 'processing', 'packed', 'out_for_delivery', 'on_the_way'].includes(o.status));
+        } else if (this.ordersFilter === 'delivered') {
+            list = list.filter(o => o.status === 'delivered');
+        } else if (this.ordersFilter === 'cancelled') {
+            list = list.filter(o => o.status === 'cancelled');
+        }
+
+        // Filter list by search query
+        if (this.ordersSearchQuery) {
+            const q = this.ordersSearchQuery;
+            list = list.filter(o => {
+                const num = (o.order_number || `#ORD-${o.id}`).toLowerCase();
+                const status = (o.status || '').toLowerCase();
+                const address = (o.shipping_address || '').toLowerCase();
+                const hasItem = (o.items || []).some(i => 
+                    (i.product_name || '').toLowerCase().includes(q) || 
+                    (i.farmer_name || '').toLowerCase().includes(q)
+                );
+                return num.includes(q) || status.includes(q) || address.includes(q) || hasItem;
+            });
+        }
+
+        // Empty state handling
+        if (list.length === 0) {
+            const isFiltered = this.ordersFilter !== 'all' || this.ordersSearchQuery !== '';
+            container.innerHTML = `
+                <div style="text-align:center; padding:60px 20px; background:white; border-radius:18px; border:1px dashed var(--beige-mid);">
+                    <div style="width:70px; height:70px; background:var(--green-pale); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; color:var(--green-primary); font-size:28px;">
+                        <i class="fas ${isFiltered ? 'fa-magnifying-glass' : 'fa-basket-shopping'}"></i>
+                    </div>
+                    <h3 style="font-family:var(--font-serif); font-size:22px; color:var(--text-dark); margin-bottom:8px;">
+                        ${isFiltered ? 'No orders match your search' : 'No orders placed yet'}
+                    </h3>
+                    <p style="font-size:13.5px; color:var(--text-muted); max-width:440px; margin:0 auto 20px;">
+                        ${isFiltered 
+                            ? 'Try clearing your search query or switching tabs to see your other farm orders.' 
+                            : 'Explore seasonal harvests directly from verified organic farmers in your region.'}
+                    </p>
+                    ${isFiltered 
+                        ? `<button class="btn-order-action secondary" onclick="customer.clearOrderSearch(); customer.filterOrders('all');">
+                               <i class="fas fa-rotate-left"></i> Reset All Filters
+                           </button>`
+                        : `<button class="btn-order-action primary" onclick="customer.showPage('browse')">
+                               <i class="fas fa-store"></i> Browse Fresh Products
+                           </button>`}
+                </div>`;
+            return;
+        }
+
+        // Render Cards or Table view
+        if (this.ordersViewMode === 'table') {
+            container.innerHTML = this.renderOrdersTable(list);
+        } else {
+            container.innerHTML = this.renderOrderCards(list);
+        }
+    },
+
+    renderOrderCards(orders) {
+        return `<div class="orders-cards-grid">
+            ${orders.map(o => {
+                const meta = this.getOrderStatusMeta(o.status);
+                const isInTransit = ['out_for_delivery', 'on_the_way'].includes(o.status);
+                const orderNum = o.order_number || `#ORD-${o.id}`;
+                const dateStr = o.created_at ? new Date(o.created_at).toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                }) : 'Recent';
+                const timeStr = o.created_at ? new Date(o.created_at).toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : '';
+
+                const items = o.items || [];
+                const firstThree = items.slice(0, 3);
+                const remaining = items.length - 3;
+                const payMethod = (o.payment_method || 'cod').replace(/_/g, ' ');
+                const payStatus = o.payment_status || (o.status === 'delivered' ? 'paid' : 'pending');
+
+                return `
+                <div class="order-card-modern" onclick="customer.showOrderTracking(${o.id})">
+                    <!-- Card Header -->
+                    <div class="order-card-header">
+                        <div class="order-card-id-block">
+                            <div class="order-id-chip" onclick="event.stopPropagation()">
+                                <i class="fas fa-hashtag" style="font-size:10px; color:var(--text-light);"></i>
+                                <span>${orderNum}</span>
+                                <i class="far fa-copy copy-btn" onclick="customer.copyOrderId('${orderNum}', event)" title="Copy Order #"></i>
+                            </div>
+                            <div class="order-date-text">
+                                <i class="far fa-calendar-alt"></i>
+                                <span>${dateStr}${timeStr ? ` · ${timeStr}` : ''}</span>
+                            </div>
+                            <span class="order-pay-method-badge">
+                                <i class="fas fa-credit-card" style="font-size:10px;"></i>
+                                ${payMethod} (${payStatus})
+                            </span>
+                        </div>
+
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span class="status-pill ${meta.pillClass}">
+                                <i class="${meta.icon}"></i>
+                                ${meta.label}
+                            </span>
+                            ${isInTransit ? `<span class="pulse-live-dot" title="Live Delivery Active"></span>` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Card Body -->
+                    <div class="order-card-body">
+                        <!-- Left: Items list -->
+                        <div class="order-items-scroll">
+                            ${firstThree.map(item => {
+                                const fallbackImg = this.getProduceFallback(item.product_name);
+                                const imgSrc = item.image_url || fallbackImg;
+                                const itemTotal = (parseFloat(item.price || 0) * (item.quantity || 1)).toFixed(2);
+                                return `
+                                <div class="order-single-item">
+                                    <img src="${imgSrc}" class="order-item-img" alt="${item.product_name || 'Produce'}" onerror="this.onerror=null; this.src='${fallbackImg}';">
+                                    <div class="order-item-info">
+                                        <div class="order-item-name">${item.product_name || 'Fresh Produce'}</div>
+                                        <div class="order-item-meta">
+                                            <span>Qty: <strong>${item.quantity || 1}</strong></span>
+                                            <span>•</span>
+                                            <span>₹${parseFloat(item.price || 0).toFixed(2)} each</span>
+                                            ${item.farmer_name ? `<span>•</span><span class="order-item-farmer"><i class="fas fa-seedling"></i> ${item.farmer_name}</span>` : ''}
+                                        </div>
+                                    </div>
+                                    <div style="font-weight:700; color:var(--green-dark); font-size:14px; white-space:nowrap;">
+                                        ₹${itemTotal}
+                                    </div>
+                                </div>`;
+                            }).join('')}
+                            
+                            ${remaining > 0 ? `
+                                <div style="font-size:12px; color:var(--text-muted); font-style:italic; padding-left:72px;">
+                                    + ${remaining} more item${remaining > 1 ? 's' : ''} in this delivery package
+                                </div>` : ''}
+                        </div>
+
+                        <!-- Right: Shipping destination snippet -->
+                        <div class="order-shipping-dest" onclick="event.stopPropagation()">
+                            <div class="order-shipping-dest-title">
+                                <i class="fas fa-location-dot" style="color:var(--orange);"></i>
+                                Delivery Address
+                            </div>
+                            <div style="line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+                                ${o.shipping_address || 'Rajkot, Gujarat (Default Address)'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card Footer -->
+                    <div class="order-card-footer" onclick="event.stopPropagation()">
+                        <div class="order-total-block">
+                            <span class="order-total-label">Grand Total:</span>
+                            <span class="order-total-value">₹${parseFloat(o.total_amount || 0).toFixed(2)}</span>
+                            <span class="free-delivery-tag"><i class="fas fa-truck-ramp-box"></i> Farm Direct</span>
+                        </div>
+
+                        <div class="order-card-actions">
+                            ${isInTransit ? `
+                                <button class="btn-order-action live-map" onclick="customer.openCustomerLiveTracking(${o.id})">
+                                    <i class="fas fa-motorcycle"></i> Live GPS Map
+                                </button>` : ''}
+                            <button class="btn-order-action primary" onclick="customer.showOrderTracking(${o.id})">
+                                <i class="fas fa-route"></i> Order Details &amp; Tracking
+                            </button>
+                            <button class="btn-order-action secondary" onclick="customer.reorderItems(${o.id}, event)" title="Add all items from this order to your cart">
+                                <i class="fas fa-rotate-right"></i> Buy Again
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('')}
+        </div>`;
+    },
+
+    renderOrdersTable(orders) {
+        return `
+        <div class="orders-table-card">
+            <div class="orders-table-container">
+                <table class="orders-table-modern">
                     <thead>
                         <tr>
-                            <th>Order #</th>
-                            <th>Items</th>
+                            <th>Order Details</th>
+                            <th>Produce Items</th>
+                            <th>Payment</th>
                             <th>Total</th>
                             <th>Current Status</th>
-                            <th>Order Date</th>
-                            <th>Action</th>
+                            <th style="text-align:right;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${data.orders.map(o => {
-                            const itemsText = (o.items || []).map(i => `${i.product_name} (${i.quantity})`).join(', ') || `${o.item_count || 1} items`;
+                        ${orders.map(o => {
+                            const meta = this.getOrderStatusMeta(o.status);
                             const isInTransit = ['out_for_delivery', 'on_the_way'].includes(o.status);
-                            return `<tr style="cursor:pointer;" onclick="customer.showOrderTracking(${o.id})">
-                            <td><strong>${o.order_number||'#ORD-'+o.id}</strong></td>
-                            <td style="font-size:13px; color:var(--text-body); max-width:240px;">${itemsText}</td>
-                            <td style="font-weight:700; color:var(--green-dark);">₹${parseFloat(o.total_amount||0).toFixed(2)}</td>
-                            <td>
-                                <span class="status-badge-pill ${o.status||'pending'}">${(o.status||'pending').replace(/_/g, ' ').toUpperCase()}</span>
-                                ${isInTransit ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-left:4px;animation:pulse 1.5s infinite;" title="Live Delivery Active"></span>` : ''}
-                            </td>
-                            <td style="font-size:12px; color:var(--text-muted);">${new Date(o.created_at||Date.now()).toLocaleDateString()}</td>
-                            <td>
-                                <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                                    <button class="btn-primary" style="padding:6px 12px; font-size:12px; border-radius:6px; background:var(--green-primary); color:white; font-weight:600; cursor:pointer;" onclick="event.stopPropagation(); customer.showOrderTracking(${o.id})">
-                                        <i class="fas fa-route" style="margin-right:4px;"></i> Details
-                                    </button>
-                                    ${isInTransit ? `<button onclick="event.stopPropagation(); customer.openCustomerLiveTracking(${o.id})" style="padding:6px 12px; font-size:12px; border-radius:6px; background:#0284C7; color:white; font-weight:700; cursor:pointer; border:none; display:flex; align-items:center; gap:4px; box-shadow:0 2px 6px rgba(2,132,199,0.3);">
-                                        <i class="fas fa-motorcycle"></i> Live Map
-                                    </button>` : ''}
-                                </div>
-                            </td>
-                        </tr>`;
+                            const orderNum = o.order_number || `#ORD-${o.id}`;
+                            const dateStr = o.created_at ? new Date(o.created_at).toLocaleDateString('en-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric'
+                            }) : 'Recent';
+                            const items = o.items || [];
+                            const itemsSummary = items.map(i => `${i.product_name} (${i.quantity})`).join(', ') || `${o.item_count || 1} items`;
+                            const payMethod = (o.payment_method || 'cod').replace(/_/g, ' ');
+
+                            return `
+                            <tr style="cursor:pointer;" onclick="customer.showOrderTracking(${o.id})">
+                                <td>
+                                    <div style="font-weight:700; color:var(--text-dark); display:flex; align-items:center; gap:6px;">
+                                        <span>${orderNum}</span>
+                                        <i class="far fa-copy copy-btn" onclick="customer.copyOrderId('${orderNum}', event)" title="Copy Order #"></i>
+                                    </div>
+                                    <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                                        <i class="far fa-calendar-alt"></i> ${dateStr}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="max-width:280px; font-size:13px; color:var(--text-body); line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+                                        ${itemsSummary}
+                                    </div>
+                                    <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+                                        ${items.length} product${items.length !== 1 ? 's' : ''} from local farm
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="order-pay-method-badge">
+                                        ${payMethod}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span style="font-family:var(--font-serif); font-weight:800; font-size:16px; color:var(--green-primary);">
+                                        ₹${parseFloat(o.total_amount || 0).toFixed(2)}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display:inline-flex; align-items:center; gap:6px;">
+                                        <span class="status-pill ${meta.pillClass}">
+                                            <i class="${meta.icon}"></i>
+                                            ${meta.label}
+                                        </span>
+                                        ${isInTransit ? `<span class="pulse-live-dot" title="Live Delivery Active"></span>` : ''}
+                                    </div>
+                                </td>
+                                <td style="text-align:right;" onclick="event.stopPropagation()">
+                                    <div style="display:inline-flex; gap:6px; align-items:center; justify-content:flex-end;">
+                                        ${isInTransit ? `
+                                            <button class="btn-order-action live-map" style="padding:6px 12px; font-size:11.5px;" onclick="customer.openCustomerLiveTracking(${o.id})">
+                                                <i class="fas fa-motorcycle"></i> Map
+                                            </button>` : ''}
+                                        <button class="btn-order-action primary" style="padding:6px 14px; font-size:11.5px;" onclick="customer.showOrderTracking(${o.id})">
+                                            <i class="fas fa-route"></i> Details
+                                        </button>
+                                        <button class="btn-order-action secondary" style="padding:6px 10px; font-size:11.5px;" onclick="customer.reorderItems(${o.id}, event)" title="Buy Again">
+                                            <i class="fas fa-rotate-right"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>`;
                         }).join('')}
                     </tbody>
-                </table>`;
-            } else {
-                container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-muted);">
-                    <i class="fas fa-shopping-bag" style="font-size:36px; color:var(--green-primary); margin-bottom:12px;"></i>
-                    <h3 style="font-family:var(--font-serif); font-size:20px; color:var(--text-dark);">No orders yet</h3>
-                    <p style="font-size:13px; margin-top:4px;">Discover fresh farm produce and place your first order!</p>
-                </div>`;
+                </table>
+            </div>
+        </div>`;
+    },
+
+    copyOrderId(orderNum, event) {
+        if (event) event.stopPropagation();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(orderNum).then(() => {
+                if (typeof toast !== 'undefined') toast.success(`Copied ${orderNum} to clipboard!`);
+            }).catch(() => {
+                this.fallbackCopy(orderNum);
+            });
+        } else {
+            this.fallbackCopy(orderNum);
+        }
+    },
+
+    fallbackCopy(text) {
+        const input = document.createElement('input');
+        input.value = text;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        if (typeof toast !== 'undefined') toast.success(`Copied ${text} to clipboard!`);
+    },
+
+    reorderItems(orderId, event) {
+        if (event) event.stopPropagation();
+        const order = this.allOrders.find(o => o.id == orderId);
+        if (!order || !Array.isArray(order.items) || order.items.length === 0) {
+            if (typeof toast !== 'undefined') toast.error('No items found to reorder.');
+            return;
+        }
+
+        let addedCount = 0;
+        order.items.forEach(item => {
+            if (typeof cart !== 'undefined' && cart.addItem) {
+                cart.addItem({
+                    id: item.product_id,
+                    name: item.product_name,
+                    price: parseFloat(item.price || 0),
+                    image: item.image_url || 'assets/images/tomatoes.png',
+                    farmer: item.farmer_name || 'Local Farm',
+                    quantity: item.quantity || 1
+                });
+                addedCount++;
             }
-        } catch (error) {
-            console.error('Error loading orders:', error);
-            container.innerHTML = '<p style="text-align:center; padding:30px; color:var(--text-muted);">Failed to load orders</p>';
+        });
+
+        if (typeof toast !== 'undefined') {
+            toast.success(`Added ${addedCount} item${addedCount !== 1 ? 's' : ''} to your cart! 🛒`);
+        }
+
+        if (typeof cart !== 'undefined' && !cart.isOpen) {
+            cart.toggle();
         }
     },
 

@@ -1082,6 +1082,648 @@
         .step-row.current .step-label { color: var(--orange); }
         .step-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
         .step-note { font-size: 12px; color: var(--text-dark); background: var(--beige); padding: 4px 10px; border-radius: 6px; display: inline-block; margin-top: 4px; }
+
+        /* ============================================================
+           PROFESSIONAL CUSTOMER ORDERS SECTION STYLES
+           ============================================================ */
+        .orders-page-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 22px;
+            flex-wrap: wrap;
+        }
+
+        .orders-breadcrumbs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .orders-breadcrumbs a {
+            color: var(--text-muted);
+            transition: color var(--t-fast);
+        }
+
+        .orders-breadcrumbs a:hover {
+            color: var(--green-primary);
+        }
+
+        .orders-page-title {
+            font-family: var(--font-serif);
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-dark);
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+            margin: 0;
+        }
+
+        .orders-page-subtitle {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Summary Stats Cards Strip */
+        .orders-summary-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 992px) {
+            .orders-summary-strip {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 576px) {
+            .orders-summary-strip {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .order-stat-card {
+            background: var(--white);
+            border: 1px solid var(--beige);
+            border-radius: var(--radius-lg);
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 2px 6px rgba(31, 33, 27, 0.03);
+            transition: all var(--t-fast) var(--ease-out);
+        }
+
+        .order-stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(31, 33, 27, 0.06);
+            border-color: var(--beige-mid);
+        }
+
+        .order-stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 17px;
+            flex-shrink: 0;
+        }
+
+        .order-stat-icon.total { background: #EAF0DF; color: var(--green-primary); }
+        .order-stat-icon.active { background: #E0F2FE; color: #0284C7; }
+        .order-stat-icon.delivered { background: #DCFCE7; color: #16A34A; }
+        .order-stat-icon.spent { background: #FCECDD; color: var(--orange); }
+
+        .order-stat-val {
+            font-family: var(--font-serif);
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-dark);
+            line-height: 1.1;
+        }
+
+        .order-stat-lbl {
+            font-size: 11.5px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Filter & Search Toolbar */
+        .orders-toolbar {
+            background: var(--white);
+            border: 1px solid var(--beige);
+            border-radius: var(--radius-lg);
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 6px rgba(31, 33, 27, 0.02);
+        }
+
+        .orders-tabs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow-x: auto;
+            max-width: 100%;
+            padding: 2px 0;
+        }
+
+        .order-tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: var(--radius-pill);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all var(--t-fast);
+            white-space: nowrap;
+        }
+
+        .order-tab-btn:hover {
+            color: var(--green-primary);
+            background: rgba(111, 150, 56, 0.08);
+        }
+
+        .order-tab-btn.active {
+            background: var(--green-primary);
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 3px 10px rgba(53, 92, 36, 0.25);
+        }
+
+        .tab-count {
+            font-size: 11px;
+            padding: 2px 7px;
+            border-radius: var(--radius-pill);
+            background: rgba(0, 0, 0, 0.06);
+        }
+
+        .order-tab-btn.active .tab-count {
+            background: rgba(255, 255, 255, 0.25);
+            color: white;
+        }
+
+        .orders-search-view-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .orders-search-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .orders-search-box i {
+            position: absolute;
+            left: 14px;
+            font-size: 13px;
+            color: var(--text-light);
+            pointer-events: none;
+        }
+
+        .orders-search-box input {
+            background: var(--cream);
+            border: 1px solid var(--beige-mid);
+            border-radius: var(--radius-pill);
+            padding: 8px 32px 8px 36px;
+            font-size: 13px;
+            color: var(--text-dark);
+            outline: none;
+            width: 240px;
+            transition: all var(--t-fast);
+        }
+
+        .orders-search-box input:focus {
+            background: white;
+            border-color: var(--green-primary);
+            box-shadow: 0 0 0 3px rgba(53, 92, 36, 0.12);
+            width: 280px;
+        }
+
+        .orders-search-box button {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .orders-view-toggle {
+            display: flex;
+            background: var(--cream);
+            border: 1px solid var(--beige-mid);
+            border-radius: var(--radius-pill);
+            padding: 3px;
+            gap: 2px;
+        }
+
+        .view-toggle-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            color: var(--text-muted);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: all var(--t-fast);
+        }
+
+        .view-toggle-btn.active {
+            background: white;
+            color: var(--green-primary);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Modern Order Card */
+        .order-card-modern {
+            background: var(--white);
+            border: 1px solid var(--beige-mid);
+            border-radius: 18px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(31, 33, 27, 0.04);
+            overflow: hidden;
+            transition: all var(--t-fast) var(--ease-out);
+        }
+
+        .order-card-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(31, 33, 27, 0.08);
+            border-color: var(--green-soft);
+        }
+
+        .order-card-top {
+            background: var(--cream);
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--beige);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .order-card-id-block {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .order-id-chip {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-dark);
+            background: white;
+            padding: 4px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--beige-mid);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .copy-btn {
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 11.5px;
+            transition: color var(--t-fast);
+        }
+
+        .copy-btn:hover {
+            color: var(--green-primary);
+        }
+
+        .order-date-text {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .order-pay-method-badge {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--green-primary);
+            background: var(--green-pale);
+            padding: 3px 9px;
+            border-radius: var(--radius-pill);
+            text-transform: capitalize;
+        }
+
+        /* Order Status Pills */
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 14px;
+            border-radius: var(--radius-pill);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: capitalize;
+        }
+
+        .status-pill.delivered {
+            background: #EAF0DF;
+            color: #2D4A1D;
+            border: 1px solid #D2E4BD;
+        }
+
+        .status-pill.confirmed {
+            background: #E0F2FE;
+            color: #0369A1;
+            border: 1px solid #BAE6FD;
+        }
+
+        .status-pill.processing {
+            background: #EEF2FF;
+            color: #4338CA;
+            border: 1px solid #E0E7FF;
+        }
+
+        .status-pill.out_for_delivery, .status-pill.shipped {
+            background: #DCFCE7;
+            color: #15803D;
+            border: 1px solid #BBF7D0;
+        }
+
+        .status-pill.pending {
+            background: #FEF3C7;
+            color: #B45309;
+            border: 1px solid #FDE68A;
+        }
+
+        .status-pill.cancelled {
+            background: #FEE2E2;
+            color: #B91C1C;
+            border: 1px solid #FECACA;
+        }
+
+        .pulse-live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+            animation: radarPulse 1.8s infinite;
+        }
+
+        @keyframes radarPulse {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        /* Order Card Body */
+        .order-card-body {
+            padding: 18px 20px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 24px;
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .order-card-body {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .order-items-scroll {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .order-single-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .order-item-img {
+            width: 58px;
+            height: 58px;
+            border-radius: 12px;
+            object-fit: cover;
+            background: var(--cream);
+            border: 1px solid var(--beige);
+            flex-shrink: 0;
+        }
+
+        .order-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .order-item-name {
+            font-family: var(--font-serif);
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 3px;
+            line-height: 1.25;
+        }
+
+        .order-item-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .order-item-farmer {
+            color: var(--green-primary);
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .order-shipping-dest {
+            background: var(--cream-light);
+            border: 1px solid var(--beige);
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 12.5px;
+            color: var(--text-muted);
+            max-width: 320px;
+        }
+
+        .order-shipping-dest-title {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 3px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Order Card Footer */
+        .order-card-footer {
+            background: var(--cream-light);
+            border-top: 1px solid var(--beige);
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .order-total-block {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .order-total-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .order-total-value {
+            font-family: var(--font-serif);
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--green-primary);
+        }
+
+        .free-delivery-tag {
+            font-size: 10.5px;
+            color: #16A34A;
+            background: #DCFCE7;
+            padding: 2px 8px;
+            border-radius: var(--radius-pill);
+            font-weight: 600;
+        }
+
+        .order-card-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-order-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 8px 16px;
+            border-radius: var(--radius-pill);
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--t-fast);
+            text-decoration: none;
+            border: none;
+        }
+
+        .btn-order-action.primary {
+            background: var(--green-primary);
+            color: white;
+            box-shadow: 0 2px 8px rgba(53, 92, 36, 0.2);
+        }
+
+        .btn-order-action.primary:hover {
+            background: var(--green-secondary);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(53, 92, 36, 0.3);
+        }
+
+        .btn-order-action.live-map {
+            background: #0284C7;
+            color: white;
+            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+            animation: pulseMapBtn 2s infinite;
+        }
+
+        @keyframes pulseMapBtn {
+            0%, 100% { box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25); }
+            50% { box-shadow: 0 4px 14px rgba(2, 132, 199, 0.5); }
+        }
+
+        .btn-order-action.live-map:hover {
+            background: #0369A1;
+            transform: translateY(-1px);
+        }
+
+        .btn-order-action.secondary {
+            background: white;
+            color: var(--text-dark);
+            border: 1px solid var(--beige-mid);
+        }
+
+        .btn-order-action.secondary:hover {
+            background: var(--cream);
+            border-color: var(--green-soft);
+            color: var(--green-primary);
+        }
+
+        /* Modern Table View */
+        .orders-table-card {
+            background: var(--white);
+            border: 1px solid var(--beige-mid);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(31, 33, 27, 0.04);
+        }
+
+        .orders-table-container {
+            overflow-x: auto;
+            width: 100%;
+        }
+
+        .orders-table-modern {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .orders-table-modern th {
+            background: var(--cream);
+            color: var(--text-muted);
+            font-size: 11.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--beige-mid);
+            white-space: nowrap;
+        }
+
+        .orders-table-modern td {
+            padding: 16px 18px;
+            border-bottom: 1px solid var(--beige);
+            font-size: 13px;
+            vertical-align: middle;
+            color: var(--text-body);
+        }
+
+        .orders-table-modern tr:last-child td {
+            border-bottom: none;
+        }
+
+        .orders-table-modern tbody tr {
+            transition: background var(--t-fast);
+        }
+
+        .orders-table-modern tbody tr:hover {
+            background: rgba(248, 245, 236, 0.6);
+        }
     </style>
 </head>
 <body>
@@ -1479,16 +2121,95 @@
 
             <!-- PAGE: ORDERS -->
             <div id="page-orders" class="page-content">
-                <div class="section-box-header" style="margin-bottom:20px;">
+                <!-- Page Header with Title & Quick Shop Action -->
+                <div class="orders-page-header">
                     <div>
-                        <h2 style="font-family:var(--font-serif); font-size:24px; color:var(--text-dark);">My Order History</h2>
-                        <p style="font-size:13px; color:var(--text-muted);">Track your recent farm purchases and delivery status.</p>
+                        <div class="orders-breadcrumbs">
+                            <a href="#" onclick="customer.showPage('dashboard'); return false;">Home</a>
+                            <i class="fas fa-chevron-right" style="font-size:10px;"></i>
+                            <span>My Orders</span>
+                        </div>
+                        <h1 class="orders-page-title">My Orders</h1>
+                        <p class="orders-page-subtitle">Track, manage and view delivery status for all your fresh farm orders.</p>
+                    </div>
+                    <div class="orders-header-actions">
+                        <button class="btn-order-action primary" onclick="customer.showPage('browse')" style="padding:10px 20px; font-size:13px;">
+                            <i class="fas fa-leaf"></i> Shop Fresh Harvest
+                        </button>
                     </div>
                 </div>
 
-                <div class="widget-box">
-                    <div id="customer-orders">
-                        <p style="text-align:center; padding:30px; color:var(--text-muted);">Loading orders...</p>
+                <!-- Orders Metric Overview Cards -->
+                <div class="orders-summary-strip" id="orders-summary-strip">
+                    <div class="order-stat-card">
+                        <div class="order-stat-icon total"><i class="fas fa-bag-shopping"></i></div>
+                        <div>
+                            <div class="order-stat-val" id="stat-order-total">0</div>
+                            <div class="order-stat-lbl">Total Orders</div>
+                        </div>
+                    </div>
+                    <div class="order-stat-card">
+                        <div class="order-stat-icon active"><i class="fas fa-truck-fast"></i></div>
+                        <div>
+                            <div class="order-stat-val" id="stat-order-active">0</div>
+                            <div class="order-stat-lbl">Active / In-Transit</div>
+                        </div>
+                    </div>
+                    <div class="order-stat-card">
+                        <div class="order-stat-icon delivered"><i class="fas fa-circle-check"></i></div>
+                        <div>
+                            <div class="order-stat-val" id="stat-order-delivered">0</div>
+                            <div class="order-stat-lbl">Delivered</div>
+                        </div>
+                    </div>
+                    <div class="order-stat-card">
+                        <div class="order-stat-icon spent"><i class="fas fa-indian-rupee-sign"></i></div>
+                        <div>
+                            <div class="order-stat-val" id="stat-order-spent">₹0.00</div>
+                            <div class="order-stat-lbl">Total Farm Spend</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter & Search Toolbar -->
+                <div class="orders-toolbar">
+                    <div class="orders-tabs" id="orders-filter-tabs">
+                        <button class="order-tab-btn active" data-filter="all" onclick="customer.filterOrders('all')">
+                            All Orders <span class="tab-count" id="tab-count-all">0</span>
+                        </button>
+                        <button class="order-tab-btn" data-filter="active" onclick="customer.filterOrders('active')">
+                            Active <span class="tab-count" id="tab-count-active">0</span>
+                        </button>
+                        <button class="order-tab-btn" data-filter="delivered" onclick="customer.filterOrders('delivered')">
+                            Delivered <span class="tab-count" id="tab-count-delivered">0</span>
+                        </button>
+                        <button class="order-tab-btn" data-filter="cancelled" onclick="customer.filterOrders('cancelled')">
+                            Cancelled <span class="tab-count" id="tab-count-cancelled">0</span>
+                        </button>
+                    </div>
+
+                    <div class="orders-search-view-wrap">
+                        <div class="orders-search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="orders-search-input" placeholder="Search by Order # or produce..." oninput="customer.handleOrderSearch(this.value)">
+                            <button id="orders-search-clear" onclick="customer.clearOrderSearch()" style="display:none;" title="Clear search">✕</button>
+                        </div>
+                        <div class="orders-view-toggle">
+                            <button class="view-toggle-btn active" id="view-btn-cards" onclick="customer.setOrdersView('cards')" title="Card View">
+                                <i class="fas fa-th-large"></i>
+                            </button>
+                            <button class="view-toggle-btn" id="view-btn-table" onclick="customer.setOrdersView('table')" title="Table View">
+                                <i class="fas fa-table-list"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Orders Dynamic Container -->
+                <div id="customer-orders">
+                    <div style="text-align:center; padding:50px; color:var(--text-muted);">
+                        <i class="fas fa-spinner fa-spin" style="font-size:24px; margin-bottom:10px; color:var(--green-primary); display:block;"></i>
+                        Loading your orders...
                     </div>
                 </div>
             </div>
