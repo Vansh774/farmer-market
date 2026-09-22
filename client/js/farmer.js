@@ -509,66 +509,410 @@ const farmer = {
     },
 
     // ============================================
-    // PRODUCTS MANAGEMENT
+    // PRODUCTS MANAGEMENT (Executive Catalog Suite)
     // ============================================
-    async loadProducts() {
+    products: [],
+    productViewMode: localStorage.getItem('freshfield_farmer_prod_view') || 'grid',
+
+    async loadProducts(silent = false) {
         const container = document.getElementById('farmer-products');
-        if (!container) return;
-        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 30px;">Loading catalog...</p>';
+        const refreshIcon = document.getElementById('refresh-products-icon');
+        if (refreshIcon) refreshIcon.classList.add('fa-spin');
+
+        if (!silent && container && (!this.products || this.products.length === 0)) {
+            container.innerHTML = '<div style="text-align:center; padding:50px 20px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin" style="font-size:24px; color:var(--green-primary); margin-bottom:12px;"></i><p>Loading farm catalog...</p></div>';
+        }
 
         try {
             const data = await API.products.getFarmerProducts();
-            if (data && data.success && Array.isArray(data.products) && data.products.length > 0) {
-                container.innerHTML = data.products.map(p => {
-                    let imgUrl = p.image_url || '';
-                    if (imgUrl && !imgUrl.startsWith('http') && !imgUrl.startsWith('assets/')) {
-                        imgUrl = `http://localhost:5000${imgUrl}`;
-                    }
-                    const fallback = 'assets/images/tomatoes.png';
-                    const price = parseFloat(p.price).toFixed(2);
-                    const unit = p.unit || 'kg';
-                    const isAvail = p.is_available !== false;
-
-                    return `<div class="product-item">
-                        <img src="${imgUrl || fallback}" alt="${p.name}" onerror="this.onerror=null;this.src='${fallback}';">
-                        <div class="info">
-                            <h4>${p.name}</h4>
-                            <p>₹${price} / ${unit} &bull; ${p.quantity||0} in stock &bull; ${p.total_sold||0} sold</p>
-                            <span class="status-badge-pill ${isAvail?'delivered':'cancelled'}" style="margin-top:4px;">
-                                ${isAvail ? 'Available' : 'Unavailable'}
-                            </span>
-                        </div>
-                        <div class="actions">
-                            <button class="btn-icon-sm" onclick="farmer.editProduct(${p.id})" title="Edit"><i class="fas fa-pen"></i></button>
-                            <button class="btn-icon-sm danger" onclick="farmer.deleteProduct(${p.id})" title="Delete"><i class="fas fa-trash-alt"></i></button>
-                        </div>
-                    </div>`;
-                }).join('');
+            if (data && data.success && Array.isArray(data.products)) {
+                this.products = data.products;
+                this.updateProductKPIs();
+                this.syncViewToggleButtons();
+                this.renderProducts();
             } else {
-                container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-muted);">
-                    <i class="fas fa-seedling" style="font-size:36px; color:var(--green-primary); margin-bottom:12px;"></i>
-                    <p style="font-size:15px; font-weight:600; color:var(--text-dark);">No products added yet</p>
-                    <p style="font-size:13px; margin-top:4px;">Click "Add New Product" above to list fresh produce!</p>
-                </div>`;
+                this.products = [];
+                this.updateProductKPIs();
+                this.syncViewToggleButtons();
+                this.renderProducts();
             }
         } catch (error) {
             console.error('Error loading products:', error);
-            container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Failed to load products</p>';
+            if (container) {
+                container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 30px;">Failed to load products. Please click Refresh to try again.</p>';
+            }
+        } finally {
+            if (refreshIcon) {
+                setTimeout(() => refreshIcon.classList.remove('fa-spin'), 400);
+            }
         }
     },
 
+    syncViewToggleButtons() {
+        const btnGrid = document.getElementById('btn-view-grid');
+        const btnTable = document.getElementById('btn-view-table');
+        if (btnGrid) btnGrid.classList.toggle('active', this.productViewMode === 'grid');
+        if (btnTable) btnTable.classList.toggle('active', this.productViewMode === 'table');
+    },
+
+    updateProductKPIs() {
+        const total = this.products.length;
+        const healthy = this.products.filter(p => (parseInt(p.quantity) || 0) > 20).length;
+        const low = this.products.filter(p => (parseInt(p.quantity) || 0) <= 20).length;
+        const totalVal = this.products.reduce((sum, p) => {
+            const pr = parseFloat(p.price) || 0;
+            const q = parseInt(p.quantity) || 0;
+            return sum + (pr * q);
+        }, 0);
+
+        const badgeEl = document.getElementById('products-count-badge');
+        if (badgeEl) badgeEl.textContent = `${total} ${total === 1 ? 'Product Listed' : 'Products Listed'}`;
+
+        const totalEl = document.getElementById('prod-stat-total');
+        if (totalEl) totalEl.textContent = total;
+
+        const healthyEl = document.getElementById('prod-stat-healthy');
+        if (healthyEl) healthyEl.textContent = healthy;
+
+        const lowEl = document.getElementById('prod-stat-low');
+        if (lowEl) lowEl.textContent = low;
+
+        const valEl = document.getElementById('prod-stat-value');
+        if (valEl) valEl.textContent = `₹${totalVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    },
+
+    setProductViewMode(mode) {
+        this.productViewMode = mode;
+        try {
+            localStorage.setItem('freshfield_farmer_prod_view', mode);
+        } catch (e) {}
+
+        const btnGrid = document.getElementById('btn-view-grid');
+        const btnTable = document.getElementById('btn-view-table');
+        if (btnGrid) btnGrid.classList.toggle('active', mode === 'grid');
+        if (btnTable) btnTable.classList.toggle('active', mode === 'table');
+
+        this.renderProducts();
+    },
+
+    filterProducts() {
+        this.renderProducts();
+    },
+
+    clearProductSearch() {
+        const input = document.getElementById('product-search');
+        if (input) input.value = '';
+        this.renderProducts();
+    },
+
+    renderProducts() {
+        const container = document.getElementById('farmer-products');
+        if (!container) return;
+
+        const searchInput = document.getElementById('product-search');
+        const searchVal = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+        const clearBtn = document.getElementById('product-search-clear');
+        if (clearBtn) clearBtn.style.display = searchVal ? 'block' : 'none';
+
+        const catSelect = document.getElementById('product-category-filter');
+        const catVal = catSelect ? catSelect.value : 'all';
+
+        const stockSelect = document.getElementById('product-stock-filter');
+        const stockVal = stockSelect ? stockSelect.value : 'all';
+
+        const sortSelect = document.getElementById('product-sort-filter');
+        const sortVal = sortSelect ? sortSelect.value : 'newest';
+
+        // Filter
+        let list = [...this.products].filter(p => {
+            if (searchVal) {
+                const name = (p.name || '').toLowerCase();
+                const desc = (p.description || '').toLowerCase();
+                const cat = (p.category || '').toLowerCase();
+                if (!name.includes(searchVal) && !desc.includes(searchVal) && !cat.includes(searchVal)) {
+                    return false;
+                }
+            }
+
+            if (catVal !== 'all') {
+                if (p.category !== catVal) return false;
+            }
+
+            const q = parseInt(p.quantity) || 0;
+            const isAvail = p.is_available !== false && p.is_available !== 0 && p.is_available !== 'false';
+
+            if (stockVal === 'healthy' && q <= 20) return false;
+            if (stockVal === 'low' && (q <= 0 || q > 20)) return false;
+            if (stockVal === 'out' && q > 0) return false;
+            if (stockVal === 'available' && !isAvail) return false;
+            if (stockVal === 'hidden' && isAvail) return false;
+
+            return true;
+        });
+
+        // Sort
+        list.sort((a, b) => {
+            const priceA = parseFloat(a.price) || 0;
+            const priceB = parseFloat(b.price) || 0;
+            const stockA = parseInt(a.quantity) || 0;
+            const stockB = parseInt(b.quantity) || 0;
+
+            if (sortVal === 'price-asc') return priceA - priceB;
+            if (sortVal === 'price-desc') return priceB - priceA;
+            if (sortVal === 'stock-desc') return stockB - stockA;
+            if (sortVal === 'stock-low') return stockA - stockB;
+            if (sortVal === 'name-asc') return (a.name || '').localeCompare(b.name || '');
+            return (b.id || 0) - (a.id || 0);
+        });
+
+        // Empty state
+        if (list.length === 0) {
+            if (this.products.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center; padding:60px 20px; background:var(--white); border-radius:18px; border:1px dashed var(--beige-mid);">
+                        <div style="width:72px; height:72px; background:var(--green-pale); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; color:var(--green-primary); font-size:30px;">
+                            <i class="fas fa-seedling"></i>
+                        </div>
+                        <h3 style="font-family:var(--font-serif); font-size:22px; color:var(--text-dark); margin-bottom:8px;">No Produce Listed Yet</h3>
+                        <p style="font-size:13.5px; color:var(--text-muted); max-width:440px; margin:0 auto 20px;">
+                            Start listing your harvest produce so local customers can discover, purchase, and support your farm.
+                        </p>
+                        <button class="btn-add-product" onclick="farmer.showAddProductForm()">
+                            <i class="fas fa-plus-circle"></i> Add First Farm Produce
+                        </button>
+                    </div>`;
+            } else {
+                container.innerHTML = `
+                    <div style="text-align:center; padding:50px 20px; background:var(--white); border-radius:18px; border:1px solid var(--beige);">
+                        <div style="width:58px; height:58px; background:var(--cream); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; color:var(--text-muted); font-size:24px;">
+                            <i class="fas fa-filter"></i>
+                        </div>
+                        <h3 style="font-family:var(--font-serif); font-size:19px; color:var(--text-dark); margin-bottom:6px;">No matching produce found</h3>
+                        <p style="font-size:13px; color:var(--text-muted); max-width:400px; margin:0 auto 18px;">
+                            Try clearing your search query or selecting a different category/stock filter.
+                        </p>
+                        <button class="btn-refresh-catalog" onclick="farmer.clearProductFilters()">
+                            <i class="fas fa-redo"></i> Reset All Filters
+                        </button>
+                    </div>`;
+            }
+            return;
+        }
+
+        // Render Grid View
+        if (this.productViewMode === 'grid') {
+            container.innerHTML = `
+                <div class="farmer-products-grid">
+                    ${list.map(p => this.createProductCardHTML(p)).join('')}
+                </div>`;
+        } else {
+            // Render Table View
+            container.innerHTML = `
+                <div class="farmer-products-table-wrap">
+                    <table class="farmer-products-table">
+                        <thead>
+                            <tr>
+                                <th>Produce Item</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Stock Inventory</th>
+                                <th>Total Sold</th>
+                                <th>Visibility</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${list.map(p => this.createProductTableRowHTML(p)).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+    },
+
+    clearProductFilters() {
+        const searchInput = document.getElementById('product-search');
+        if (searchInput) searchInput.value = '';
+        const catSelect = document.getElementById('product-category-filter');
+        if (catSelect) catSelect.value = 'all';
+        const stockSelect = document.getElementById('product-stock-filter');
+        if (stockSelect) stockSelect.value = 'all';
+        const sortSelect = document.getElementById('product-sort-filter');
+        if (sortSelect) sortSelect.value = 'newest';
+        this.renderProducts();
+    },
+
+    createProductCardHTML(p) {
+        let imgUrl = p.image_url || '';
+        if (imgUrl && !imgUrl.startsWith('http') && !imgUrl.startsWith('assets/')) {
+            imgUrl = `http://localhost:5000${imgUrl}`;
+        }
+        const fallback = 'assets/images/tomatoes.png';
+        const price = parseFloat(p.price).toFixed(2);
+        const unit = p.unit || 'kg';
+        const quantity = parseInt(p.quantity) || 0;
+        const totalSold = parseInt(p.total_sold) || 0;
+        const isAvail = p.is_available !== false && p.is_available !== 0 && p.is_available !== 'false';
+
+        // Stock calculation
+        let stockClass = 'healthy';
+        let stockLabel = `In Stock (${quantity} ${unit})`;
+        let fillWidth = Math.min(100, Math.max(10, Math.round((quantity / 100) * 100)));
+
+        if (quantity <= 0) {
+            stockClass = 'out';
+            stockLabel = 'Out of Stock (0)';
+            fillWidth = 100;
+        } else if (quantity <= 20) {
+            stockClass = 'low';
+            stockLabel = `Low Stock (${quantity} ${unit} left)`;
+            fillWidth = Math.round((quantity / 20) * 100);
+        }
+
+        const safeDesc = p.description ? p.description.replace(/"/g, '&quot;') : 'Freshly harvested natural produce directly from our farm soil.';
+
+        return `
+            <div class="farmer-prod-card" data-product-id="${p.id}">
+                <div class="farmer-prod-img-wrap">
+                    <img src="${imgUrl || fallback}" alt="${p.name}" class="farmer-prod-img" loading="lazy" onerror="this.onerror=null;this.src='${fallback}';">
+                    <span class="farmer-prod-cat-pill">${p.category || 'Produce'}</span>
+                    <button type="button" class="farmer-prod-status-pill ${isAvail ? 'available' : 'unavailable'}" 
+                        onclick="farmer.toggleProductAvailability(${p.id})" 
+                        title="Click to toggle visibility in store">
+                        <i class="fas ${isAvail ? 'fa-check-circle' : 'fa-eye-slash'}"></i> ${isAvail ? 'Available' : 'Hidden'}
+                    </button>
+                </div>
+
+                <div class="farmer-prod-body">
+                    <h4 class="farmer-prod-title">${p.name}</h4>
+                    <p class="farmer-prod-desc">${safeDesc}</p>
+
+                    <div class="farmer-prod-pricing-row">
+                        <div class="farmer-prod-price">
+                            ₹${price} <span class="farmer-prod-unit">/ ${unit}</span>
+                        </div>
+                        <span class="farmer-prod-sold">
+                            <i class="fas fa-shopping-bag" style="margin-right:4px;"></i>${totalSold} sold
+                        </span>
+                    </div>
+
+                    <div class="farmer-prod-stock-wrap">
+                        <div class="farmer-prod-stock-meta">
+                            <span class="stock-level-${stockClass}">
+                                <i class="fas ${stockClass === 'healthy' ? 'fa-boxes' : stockClass === 'low' ? 'fa-exclamation-triangle' : 'fa-times-circle'}"></i> ${stockLabel}
+                            </span>
+                            <span style="color:var(--text-muted); font-size:11px;">Max 100+</span>
+                        </div>
+                        <div class="farmer-prod-stock-bar">
+                            <div class="farmer-prod-stock-fill ${stockClass}" style="width: ${fillWidth}%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="farmer-prod-actions">
+                        <button type="button" class="btn-prod-edit" onclick="farmer.editProduct(${p.id})">
+                            <i class="fas fa-pen"></i> Edit Produce
+                        </button>
+                        <button type="button" class="btn-prod-delete" onclick="farmer.deleteProduct(${p.id})" title="Delete Produce Listing">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+    },
+
+    createProductTableRowHTML(p) {
+        let imgUrl = p.image_url || '';
+        if (imgUrl && !imgUrl.startsWith('http') && !imgUrl.startsWith('assets/')) {
+            imgUrl = `http://localhost:5000${imgUrl}`;
+        }
+        const fallback = 'assets/images/tomatoes.png';
+        const price = parseFloat(p.price).toFixed(2);
+        const unit = p.unit || 'kg';
+        const quantity = parseInt(p.quantity) || 0;
+        const totalSold = parseInt(p.total_sold) || 0;
+        const isAvail = p.is_available !== false && p.is_available !== 0 && p.is_available !== 'false';
+
+        let stockBadgeClass = 'status-delivered';
+        let stockText = `${quantity} in stock`;
+        if (quantity <= 0) {
+            stockBadgeClass = 'status-cancelled';
+            stockText = 'Out of Stock';
+        } else if (quantity <= 20) {
+            stockBadgeClass = 'status-processing';
+            stockText = `Low (${quantity} left)`;
+        }
+
+        return `
+            <tr>
+                <td>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <img src="${imgUrl || fallback}" alt="${p.name}" style="width:52px; height:52px; border-radius:10px; object-fit:cover; border:1px solid var(--beige-mid);" onerror="this.onerror=null;this.src='${fallback}';">
+                        <div>
+                            <div style="font-family:var(--font-serif); font-size:15px; font-weight:700; color:var(--text-dark);">${p.name}</div>
+                            <div style="font-size:11.5px; color:var(--text-muted); max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.description || 'Fresh natural produce'}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span style="background:var(--cream); padding:4px 10px; border-radius:var(--radius-pill); font-size:11.5px; font-weight:600; color:var(--text-dark); border:1px solid var(--beige-mid);">
+                        ${p.category || 'Produce'}
+                    </span>
+                </td>
+                <td>
+                    <div style="font-family:var(--font-serif); font-size:16px; font-weight:700; color:var(--green-primary);">₹${price}</div>
+                    <div style="font-size:11px; color:var(--text-muted);">per ${unit}</div>
+                </td>
+                <td>
+                    <span class="status-badge-pill ${stockBadgeClass}">
+                        ${stockText}
+                    </span>
+                </td>
+                <td>
+                    <span style="font-weight:600; font-size:13px; color:var(--text-dark);">${totalSold}</span> <span style="font-size:11px; color:var(--text-muted);">orders</span>
+                </td>
+                <td>
+                    <button type="button" class="farmer-prod-status-pill ${isAvail ? 'available' : 'unavailable'}" 
+                        style="position:static;" 
+                        onclick="farmer.toggleProductAvailability(${p.id})" 
+                        title="Click to toggle visibility">
+                        <i class="fas ${isAvail ? 'fa-check-circle' : 'fa-eye-slash'}"></i> ${isAvail ? 'Available' : 'Hidden'}
+                    </button>
+                </td>
+                <td style="text-align:right;">
+                    <div style="display:inline-flex; gap:6px;">
+                        <button type="button" class="btn-icon-sm" onclick="farmer.editProduct(${p.id})" title="Edit Produce">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                        <button type="button" class="btn-icon-sm danger" onclick="farmer.deleteProduct(${p.id})" title="Delete Produce">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+    },
+
+    openProductModal() {
+        const modal = document.getElementById('product-modal');
+        if (modal) {
+            modal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+    },
+
+    closeProductModal() {
+        const modal = document.getElementById('product-modal');
+        if (modal) {
+            modal.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+        this.resetProductForm();
+    },
+
     showAddProductForm() {
+        this.resetProductForm();
         const title = document.getElementById('product-form-title');
-        if (title) title.textContent = 'Add New Product';
-        const fields = document.getElementById('product-form-fields');
-        if (fields) fields.reset();
-        const idField = document.getElementById('product-id');
-        if (idField) idField.value = '';
-        const prev = document.getElementById('upload-preview');
-        if (prev) prev.innerHTML = '';
-        this.editingProductId = null;
-        const formEl = document.getElementById('product-form');
-        if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
+        if (title) title.textContent = 'Add New Farm Produce';
+        this.openProductModal();
     },
 
     async editProduct(id) {
@@ -577,8 +921,8 @@ const farmer = {
             if (data && data.success && data.product) {
                 const p = data.product;
                 const title = document.getElementById('product-form-title');
-                if (title) title.textContent = 'Edit Product';
-                
+                if (title) title.textContent = `Edit Produce: ${p.name}`;
+
                 document.getElementById('product-id').value = p.id;
                 document.getElementById('product-name').value = p.name || '';
                 document.getElementById('product-category').value = p.category || '';
@@ -587,6 +931,12 @@ const farmer = {
                 document.getElementById('product-quantity').value = p.quantity || '';
                 document.getElementById('product-unit').value = p.unit || 'kg';
 
+                const availSelect = document.getElementById('product-available');
+                if (availSelect) {
+                    const isAvail = p.is_available !== false && p.is_available !== 0 && p.is_available !== 'false';
+                    availSelect.value = isAvail ? 'true' : 'false';
+                }
+
                 const preview = document.getElementById('upload-preview');
                 if (preview) {
                     preview.innerHTML = '';
@@ -594,19 +944,58 @@ const farmer = {
                         const img = document.createElement('img');
                         img.src = p.image_url.startsWith('http') ? p.image_url : `http://localhost:5000${p.image_url}`;
                         img.className = 'upload-preview-img';
+                        img.style.maxHeight = '140px';
+                        img.style.borderRadius = '12px';
+                        img.style.border = '1px solid var(--beige-mid)';
+                        img.style.marginTop = '12px';
                         preview.appendChild(img);
                     }
                 }
 
-                const formEl = document.getElementById('product-form');
-                if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
+                this.editingProductId = p.id;
+                this.openProductModal();
             }
         } catch (error) {
+            console.error('Error fetching product for edit:', error);
             if (typeof toast !== 'undefined') toast.error('Failed to load product details');
         }
     },
 
+    async toggleProductAvailability(id) {
+        const prod = this.products.find(p => p.id === Number(id));
+        if (!prod) return;
+
+        const currentAvail = prod.is_available !== false && prod.is_available !== 0 && prod.is_available !== 'false';
+        const newAvail = !currentAvail;
+
+        // Optimistic UI update
+        prod.is_available = newAvail;
+        this.renderProducts();
+
+        try {
+            const formData = new FormData();
+            formData.append('is_available', newAvail);
+            const res = await API.products.update(id, formData);
+            if (res && res.success) {
+                if (typeof toast !== 'undefined') {
+                    toast.success(`${prod.name} is now ${newAvail ? 'Available in store' : 'Hidden from store'}`);
+                }
+            } else {
+                throw new Error(res.message || 'Update failed');
+            }
+        } catch (err) {
+            console.error('Error toggling availability:', err);
+            // Revert
+            prod.is_available = currentAvail;
+            this.renderProducts();
+            if (typeof toast !== 'undefined') toast.error('Failed to change produce visibility');
+        }
+    },
+
     async saveProduct() {
+        const saveBtn = document.getElementById('btn-save-product');
+        const origBtnText = saveBtn ? saveBtn.innerHTML : 'Save Produce Listing';
+
         try {
             const id = document.getElementById('product-id').value;
             const name = document.getElementById('product-name').value.trim();
@@ -615,12 +1004,19 @@ const farmer = {
             const price = document.getElementById('product-price').value;
             const quantity = document.getElementById('product-quantity').value;
             const unit = document.getElementById('product-unit').value;
+            const availSelect = document.getElementById('product-available');
+            const isAvail = availSelect ? availSelect.value === 'true' : true;
             const imageFile = document.getElementById('product-image').files[0];
 
-            if (!name) { if (typeof toast!=='undefined') toast.error('Please enter a product name'); return; }
+            if (!name) { if (typeof toast!=='undefined') toast.error('Please enter a produce name'); return; }
             if (!category) { if (typeof toast!=='undefined') toast.error('Please select a category'); return; }
             if (!price || parseFloat(price) <= 0) { if (typeof toast!=='undefined') toast.error('Please enter a valid price'); return; }
-            if (!quantity || parseInt(quantity) < 0) { if (typeof toast!=='undefined') toast.error('Please enter a valid quantity'); return; }
+            if (quantity === '' || parseInt(quantity) < 0) { if (typeof toast!=='undefined') toast.error('Please enter a valid stock quantity'); return; }
+
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            }
 
             const formData = new FormData();
             formData.append('name', name);
@@ -629,48 +1025,59 @@ const farmer = {
             formData.append('price', parseFloat(price));
             formData.append('quantity', parseInt(quantity));
             formData.append('unit', unit || 'kg');
+            formData.append('is_available', isAvail);
             if (imageFile) formData.append('image', imageFile);
 
             let result;
             if (id) {
                 result = await API.products.update(id, formData);
-                if (result && result.success && typeof toast!=='undefined') toast.success('Product updated successfully!');
+                if (result && result.success && typeof toast!=='undefined') toast.success('Produce updated successfully! 🌿');
             } else {
                 result = await API.products.create(formData);
-                if (result && result.success && typeof toast!=='undefined') toast.success('Product added successfully!');
+                if (result && result.success && typeof toast!=='undefined') toast.success('New produce listed successfully! 🌿');
             }
 
             if (result && result.success) {
-                this.resetProductForm();
-                await this.loadProducts();
+                this.closeProductModal();
+                await this.loadProducts(true);
             }
         } catch (error) {
             console.error('Save product error:', error);
             if (typeof toast!=='undefined') toast.error(error.message || 'Failed to save product');
+        } finally {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = origBtnText;
+            }
         }
     },
 
     resetProductForm() {
         const fields = document.getElementById('product-form-fields');
         if (fields) fields.reset();
-        document.getElementById('product-id').value = '';
+        const idField = document.getElementById('product-id');
+        if (idField) idField.value = '';
         const prev = document.getElementById('upload-preview');
         if (prev) prev.innerHTML = '';
         const title = document.getElementById('product-form-title');
-        if (title) title.textContent = 'Add New Product';
+        if (title) title.textContent = 'Add New Farm Produce';
         this.editingProductId = null;
     },
 
     async deleteProduct(id) {
-        if (!confirm('Are you sure you want to delete this product?')) return;
+        const prod = this.products.find(p => p.id === Number(id));
+        const name = prod ? prod.name : 'this produce';
+
+        if (!confirm(`Are you sure you want to permanently remove "${name}" from your catalog?`)) return;
+
         try {
             const result = await API.products.delete(id);
             if (result && result.success) {
-                if (typeof toast!=='undefined') toast.success('Product deleted successfully');
-                this.loadProducts();
+                if (typeof toast!=='undefined') toast.success('Produce deleted successfully');
+                await this.loadProducts(true);
             }
         } catch (error) {
-            if (typeof toast!=='undefined') toast.error('Failed to delete product');
+            if (typeof toast!=='undefined') toast.error('Failed to delete produce');
         }
     },
 

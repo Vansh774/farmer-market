@@ -1053,18 +1053,89 @@
             }
         }
 
-        /* Products Management Page */
-        .products-page-header {
+        /* ============================================================
+           PROFESSIONAL FARMER PRODUCT CATALOG SUITE
+           ============================================================ */
+        .products-page-topbar {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .products-breadcrumbs {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            margin-bottom: 24px;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .products-breadcrumbs a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color var(--t-fast);
+        }
+        .products-breadcrumbs a:hover {
+            color: var(--green-primary);
+        }
+
+        .products-heading-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .products-heading-title {
+            font-family: var(--font-serif);
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin: 0;
+            line-height: 1.2;
+        }
+        .products-total-badge {
+            background: var(--green-pale);
+            color: var(--green-primary);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: var(--radius-pill);
+            border: 1px solid rgba(53, 92, 36, 0.2);
+        }
+
+        .products-top-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-refresh-catalog {
+            background: var(--white);
+            border: 1px solid var(--beige-mid);
+            color: var(--text-dark);
+            padding: 10px 18px;
+            border-radius: var(--radius-pill);
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all var(--t-fast);
+        }
+        .btn-refresh-catalog:hover {
+            background: var(--beige);
+            color: var(--green-primary);
+            border-color: var(--green-soft);
         }
 
         .btn-add-product {
             background: var(--green-primary);
             color: white;
-            padding: 12px 24px;
+            padding: 11px 22px;
             border-radius: var(--radius-pill);
             font-size: 13.5px;
             font-weight: 600;
@@ -1073,78 +1144,516 @@
             gap: 8px;
             box-shadow: 0 4px 14px rgba(53, 92, 36, 0.25);
             transition: all var(--t-fast);
+            cursor: pointer;
+            border: none;
         }
-
         .btn-add-product:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(53, 92, 36, 0.35);
+            background: var(--green-secondary);
         }
 
-        /* Product item row */
-        .product-item {
+        /* 4-Metric KPI Inventory Strip */
+        .products-kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        @media (max-width: 992px) {
+            .products-kpi-strip { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 576px) {
+            .products-kpi-strip { grid-template-columns: 1fr; }
+        }
+
+        .product-kpi-card {
+            background: var(--white);
+            border: 1px solid var(--beige);
+            border-radius: var(--radius-lg);
+            padding: 16px 18px;
             display: flex;
             align-items: center;
-            gap: 16px;
-            background: var(--cream-light);
-            border: 1px solid var(--beige-mid);
+            gap: 14px;
+            box-shadow: 0 2px 8px rgba(31, 33, 27, 0.03);
+            transition: all var(--t-fast) var(--ease-out);
+        }
+        .product-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--beige-mid);
+        }
+        .product-kpi-icon {
+            width: 46px;
+            height: 46px;
             border-radius: var(--radius-md);
-            padding: 16px;
-            margin-bottom: 12px;
-        }
-
-        .product-item img {
-            width: 64px;
-            height: 64px;
-            border-radius: 12px;
-            object-fit: cover;
-            background: var(--beige);
-        }
-
-        .product-item .info {
-            flex: 1;
-        }
-
-        .product-item .info h4 {
-            font-family: var(--font-serif);
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-dark);
-            margin-bottom: 4px;
-        }
-
-        .product-item .info p {
-            font-size: 12.5px;
-            color: var(--text-muted);
-        }
-
-        .product-item .actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .btn-icon-sm {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            border: 1px solid var(--beige-mid);
-            background: var(--white);
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 19px;
+            flex-shrink: 0;
+        }
+        .product-kpi-num {
+            font-family: var(--font-serif);
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-dark);
+            line-height: 1.1;
+        }
+        .product-kpi-label {
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-top: 2px;
+        }
+        .product-kpi-sub {
+            font-size: 11px;
+            color: var(--text-light);
+            margin-top: 2px;
+        }
+
+        /* Filter & Control Toolbar */
+        .products-control-toolbar {
+            background: var(--white);
+            border: 1px solid var(--beige);
+            border-radius: var(--radius-lg);
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 8px rgba(31, 33, 27, 0.02);
+        }
+        .products-search-wrap {
+            position: relative;
+            flex: 1;
+            min-width: 240px;
+            max-width: 360px;
+        }
+        .products-search-wrap i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
             font-size: 13px;
+            pointer-events: none;
+        }
+        .products-search-input {
+            width: 100%;
+            padding: 10px 34px 10px 38px;
+            border: 1px solid var(--beige-mid);
+            border-radius: var(--radius-pill);
+            font-size: 13px;
+            font-family: var(--font-sans);
+            background: var(--cream-light);
             color: var(--text-dark);
             transition: all var(--t-fast);
         }
-
-        .btn-icon-sm:hover {
+        .products-search-input:focus {
+            outline: none;
             border-color: var(--green-primary);
-            color: var(--green-primary);
-            transform: scale(1.08);
+            background: var(--white);
+            box-shadow: 0 0 0 3px rgba(53, 92, 36, 0.12);
+        }
+        .products-search-clear {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 12px;
+            padding: 4px;
+            display: none;
+        }
+        .products-search-clear:hover { color: var(--text-dark); }
+
+        .products-filters-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .product-select-filter {
+            padding: 9px 14px;
+            border: 1px solid var(--beige-mid);
+            border-radius: var(--radius-pill);
+            background: var(--cream-light);
+            font-size: 12.5px;
+            font-weight: 500;
+            color: var(--text-dark);
+            cursor: pointer;
+            transition: all var(--t-fast);
+        }
+        .product-select-filter:focus {
+            outline: none;
+            border-color: var(--green-primary);
+            background: var(--white);
         }
 
-        .btn-icon-sm.danger:hover {
-            border-color: #DC2626;
+        .product-view-toggle {
+            display: inline-flex;
+            background: var(--cream);
+            border: 1px solid var(--beige-mid);
+            border-radius: var(--radius-pill);
+            padding: 3px;
+            gap: 2px;
+        }
+        .product-view-btn {
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all var(--t-fast);
+        }
+        .product-view-btn.active {
+            background: var(--white);
+            color: var(--green-primary);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            font-weight: 700;
+        }
+
+        /* Product Cards Grid Mode */
+        .farmer-products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 22px;
+        }
+
+        .farmer-prod-card {
+            background: var(--white);
+            border: 1px solid var(--beige);
+            border-radius: 18px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: all var(--t-med) var(--ease-out);
+            box-shadow: 0 2px 10px rgba(31, 33, 27, 0.03);
+            position: relative;
+        }
+        .farmer-prod-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(31, 33, 27, 0.08);
+            border-color: var(--beige-mid);
+        }
+
+        .farmer-prod-img-wrap {
+            position: relative;
+            width: 100%;
+            height: 180px;
+            background: var(--cream);
+            overflow: hidden;
+        }
+        .farmer-prod-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        .farmer-prod-card:hover .farmer-prod-img {
+            transform: scale(1.06);
+        }
+
+        .farmer-prod-cat-pill {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            padding: 4px 10px;
+            border-radius: var(--radius-pill);
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--green-primary);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            letter-spacing: 0.02em;
+        }
+
+        .farmer-prod-status-pill {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            padding: 4px 10px;
+            border-radius: var(--radius-pill);
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            transition: all var(--t-fast);
+            border: 1px solid transparent;
+        }
+        .farmer-prod-status-pill.available {
+            background: #D6E4B8;
+            color: #355C24;
+            border-color: #B5CE85;
+        }
+        .farmer-prod-status-pill.unavailable {
+            background: #FEE2E2;
             color: #DC2626;
+            border-color: #FCA5A5;
+        }
+        .farmer-prod-status-pill:hover {
+            transform: scale(1.05);
+        }
+
+        .farmer-prod-body {
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        .farmer-prod-title {
+            font-family: var(--font-serif);
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+        .farmer-prod-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.4;
+            margin-bottom: 12px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 34px;
+        }
+
+        .farmer-prod-pricing-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed var(--beige-mid);
+        }
+        .farmer-prod-price {
+            font-family: var(--font-serif);
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--green-primary);
+        }
+        .farmer-prod-unit {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        .farmer-prod-sold {
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: var(--cream);
+            padding: 3px 8px;
+            border-radius: var(--radius-pill);
+        }
+
+        /* Stock progress meter */
+        .farmer-prod-stock-wrap {
+            margin-bottom: 16px;
+        }
+        .farmer-prod-stock-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11.5px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .stock-level-healthy { color: #2E7D32; }
+        .stock-level-low { color: #D97706; }
+        .stock-level-out { color: #DC2626; }
+
+        .farmer-prod-stock-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--cream);
+            border-radius: var(--radius-pill);
+            overflow: hidden;
+        }
+        .farmer-prod-stock-fill {
+            height: 100%;
+            border-radius: var(--radius-pill);
+            transition: width 0.5s ease;
+        }
+        .farmer-prod-stock-fill.healthy { background: linear-gradient(90deg, #6F9638, #355C24); }
+        .farmer-prod-stock-fill.low { background: linear-gradient(90deg, #FBBF75, #F28C28); }
+        .farmer-prod-stock-fill.out { background: #DC2626; }
+
+        /* Card Actions */
+        .farmer-prod-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: auto;
+        }
+        .btn-prod-edit {
+            flex: 1;
+            padding: 9px 12px;
+            background: var(--cream-light);
+            border: 1px solid var(--beige-mid);
+            border-radius: var(--radius-pill);
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-dark);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all var(--t-fast);
+        }
+        .btn-prod-edit:hover {
+            background: var(--green-pale);
+            color: var(--green-primary);
+            border-color: var(--green-soft);
+        }
+        .btn-prod-delete {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--cream-light);
+            border: 1px solid var(--beige-mid);
+            color: var(--text-muted);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all var(--t-fast);
+        }
+        .btn-prod-delete:hover {
+            background: #FEE2E2;
+            color: #DC2626;
+            border-color: #FCA5A5;
+        }
+
+        /* Products Table Mode */
+        .farmer-products-table-wrap {
+            background: var(--white);
+            border: 1px solid var(--beige);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(31, 33, 27, 0.03);
+        }
+        .farmer-products-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+        .farmer-products-table th {
+            background: var(--cream);
+            padding: 14px 18px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border-bottom: 1px solid var(--beige-mid);
+        }
+        .farmer-products-table td {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--beige);
+            color: var(--text-dark);
+            vertical-align: middle;
+        }
+        .farmer-products-table tr:hover td {
+            background: var(--cream-light);
+        }
+        .farmer-products-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Modal Overlay & Editor Window */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(31, 33, 27, 0.6);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            z-index: 2500;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        .modal-overlay.open {
+            display: flex !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            animation: modalFadeIn 0.25s var(--ease-out);
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .product-modal-box {
+            background: var(--cream-light);
+            border-radius: 22px;
+            width: 100%;
+            max-width: 740px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 30px;
+            box-shadow: 0 20px 50px rgba(31, 33, 27, 0.25);
+            border: 1px solid var(--beige);
+            position: relative;
+        }
+        .product-modal-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--beige-mid);
+            margin-bottom: 22px;
+        }
+        .product-modal-title {
+            font-family: var(--font-serif);
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin: 0;
+        }
+        .product-modal-close {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--white);
+            border: 1px solid var(--beige-mid);
+            color: var(--text-muted);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all var(--t-fast);
+        }
+        .product-modal-close:hover {
+            background: var(--beige);
+            color: var(--text-dark);
         }
 
         /* Form Styles */
@@ -1665,44 +2174,164 @@
 
                     </div>
 
-                </div>
-
-                <!-- PAGE: PRODUCTS -->
+                          <!-- PAGE: PRODUCTS (Professional Farm Inventory & Catalog) -->
                 <div id="page-products" class="page-content">
-                    <div class="products-page-header">
+                    
+                    <!-- Top Bar with Title, Counts & Actions -->
+                    <div class="products-page-topbar">
                         <div>
-                            <h2 style="font-family:var(--font-serif); font-size:24px; color:var(--text-dark);">Product
-                                Catalog</h2>
-                            <p style="font-size:13px; color:var(--text-muted);">Manage your farm produce listings,
-                                prices, and stock inventory.</p>
+                            <div class="products-breadcrumbs">
+                                <a href="#" onclick="farmer.showPage('dashboard')"><i class="fas fa-home"></i> Farm Dashboard</a>
+                                <span>/</span>
+                                <span>Product Management</span>
+                            </div>
+                            <div class="products-heading-row">
+                                <h2 class="products-heading-title">Product Catalog</h2>
+                                <span class="products-total-badge" id="products-count-badge">Loading...</span>
+                            </div>
+                            <p style="font-size:13px; color:var(--text-muted); margin-top:4px;">
+                                Manage your farm produce listings, pricing, live inventory stock, and catalog visibility.
+                            </p>
                         </div>
-                        <button class="btn-add-product" onclick="farmer.showAddProductForm()">
-                            <i class="fas fa-plus"></i> Add New Product
-                        </button>
+                        <div class="products-top-actions">
+                            <button class="btn-refresh-catalog" onclick="farmer.loadProducts()" title="Reload catalog">
+                                <i class="fas fa-sync-alt" id="refresh-products-icon"></i> Refresh
+                            </button>
+                            <button class="btn-add-product" onclick="farmer.showAddProductForm()">
+                                <i class="fas fa-plus-circle"></i> Add New Product
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Products List Container -->
+                    <!-- 4-Metric KPI Inventory Strip -->
+                    <div class="products-kpi-strip">
+                        <div class="product-kpi-card">
+                            <div class="product-kpi-icon" style="background:#EAF0DF; color:var(--green-primary);">
+                                <i class="fas fa-boxes-stacked"></i>
+                            </div>
+                            <div>
+                                <div class="product-kpi-num" id="prod-stat-total">0</div>
+                                <div class="product-kpi-label">Active Listings</div>
+                                <div class="product-kpi-sub">Total catalog items</div>
+                            </div>
+                        </div>
+
+                        <div class="product-kpi-card">
+                            <div class="product-kpi-icon" style="background:#D6E4B8; color:#355C24;">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div>
+                                <div class="product-kpi-num" id="prod-stat-healthy">0</div>
+                                <div class="product-kpi-label">In Stock</div>
+                                <div class="product-kpi-sub">Healthy inventory levels</div>
+                            </div>
+                        </div>
+
+                        <div class="product-kpi-card">
+                            <div class="product-kpi-icon" style="background:#FEE2E2; color:#DC2626;">
+                                <i class="fas fa-triangle-exclamation"></i>
+                            </div>
+                            <div>
+                                <div class="product-kpi-num" id="prod-stat-low">0</div>
+                                <div class="product-kpi-label">Low / Out of Stock</div>
+                                <div class="product-kpi-sub">Needs farmer restock</div>
+                            </div>
+                        </div>
+
+                        <div class="product-kpi-card">
+                            <div class="product-kpi-icon" style="background:#FDE8D0; color:#D97706;">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                            <div>
+                                <div class="product-kpi-num" id="prod-stat-value">₹0.00</div>
+                                <div class="product-kpi-label">Gross Farm Valuation</div>
+                                <div class="product-kpi-sub">Retail inventory worth</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter & View Controls Toolbar -->
+                    <div class="products-control-toolbar">
+                        <div class="products-search-wrap">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="product-search" class="products-search-input" 
+                                placeholder="Search produce by name, category, notes..." 
+                                oninput="farmer.filterProducts()">
+                            <button id="product-search-clear" class="products-search-clear" onclick="farmer.clearProductSearch()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <div class="products-filters-group">
+                            <select id="product-category-filter" class="product-select-filter" onchange="farmer.filterProducts()">
+                                <option value="all">All Categories</option>
+                                <option value="Vegetables">Vegetables</option>
+                                <option value="Fruits">Fruits</option>
+                                <option value="Leafy Greens">Leafy Greens</option>
+                                <option value="Organic">Organic</option>
+                                <option value="Dairy & Farm Fresh">Dairy & Farm Fresh</option>
+                            </select>
+
+                            <select id="product-stock-filter" class="product-select-filter" onchange="farmer.filterProducts()">
+                                <option value="all">All Stock Status</option>
+                                <option value="healthy">In Stock (&gt; 20)</option>
+                                <option value="low">Low Stock (&le; 20)</option>
+                                <option value="out">Out of Stock (0)</option>
+                                <option value="available">Active for Sale</option>
+                                <option value="hidden">Hidden / Paused</option>
+                            </select>
+
+                            <select id="product-sort-filter" class="product-select-filter" onchange="farmer.filterProducts()">
+                                <option value="newest">Recently Added</option>
+                                <option value="price-asc">Price: Low to High</option>
+                                <option value="price-desc">Price: High to Low</option>
+                                <option value="stock-desc">Stock: High to Low</option>
+                                <option value="stock-asc">Stock: Low to High</option>
+                                <option value="name-asc">Name: A to Z</option>
+                            </select>
+
+                            <div class="product-view-toggle">
+                                <button type="button" id="btn-view-grid" class="product-view-btn active" 
+                                    onclick="farmer.setProductViewMode('grid')" title="Card Grid View">
+                                    <i class="fas fa-th-large"></i>
+                                </button>
+                                <button type="button" id="btn-view-table" class="product-view-btn" 
+                                    onclick="farmer.setProductViewMode('table')" title="Detailed Table View">
+                                    <i class="fas fa-list"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Products Container (Rendered dynamically as Grid or Table) -->
                     <div id="farmer-products">
                         <p style="text-align:center; padding:30px; color:var(--text-muted);">Loading products...</p>
                     </div>
 
-                    <!-- Product Form Section -->
-                    <div class="form-card" id="product-form">
-                        <h3 id="product-form-title"
-                            style="font-family:var(--font-serif); font-size:20px; color:var(--text-dark); margin-bottom:20px;">
-                            Add New Product</h3>
+                </div>
+
+                <!-- Product Add / Edit Modal Overlay -->
+                <div class="modal-overlay" id="product-modal">
+                    <div class="product-modal-box" id="product-form">
+                        <div class="product-modal-head">
+                            <h3 id="product-form-title" class="product-modal-title">Add New Farm Produce</h3>
+                            <button type="button" class="product-modal-close" onclick="farmer.closeProductModal()" title="Close">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
                         <form id="product-form-fields" onsubmit="event.preventDefault(); farmer.saveProduct();">
                             <input type="hidden" id="product-id">
 
                             <div class="form-grid">
                                 <div class="form-group">
-                                    <label for="product-name">Product Name</label>
+                                    <label for="product-name">Produce Name *</label>
                                     <input type="text" id="product-name" class="form-control"
-                                        placeholder="e.g. Fresh Organic Tomatoes" required>
+                                        placeholder="e.g. Farm Fresh Vine Tomatoes" required>
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="product-category">Category</label>
+                                    <label for="product-category">Category *</label>
                                     <select id="product-category" class="form-control" required>
                                         <option value="">Select Category</option>
                                         <option value="Vegetables">Vegetables</option>
@@ -1714,19 +2343,18 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="product-price">Price (₹)</label>
+                                    <label for="product-price">Price (₹) *</label>
                                     <input type="number" step="0.01" id="product-price" class="form-control"
-                                        placeholder="80.00" required>
+                                        placeholder="50.00" required>
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="product-quantity">Quantity in Stock</label>
-                                    <input type="number" id="product-quantity" class="form-control" placeholder="100"
-                                        required>
+                                    <label for="product-quantity">Quantity in Stock *</label>
+                                    <input type="number" id="product-quantity" class="form-control" placeholder="100" required>
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="product-unit">Unit</label>
+                                    <label for="product-unit">Selling Unit</label>
                                     <select id="product-unit" class="form-control">
                                         <option value="kg">Per kg</option>
                                         <option value="bunch">Per Bunch</option>
@@ -1736,18 +2364,25 @@
                                     </select>
                                 </div>
 
-                                <div class="form-group full">
-                                    <label for="product-description">Description</label>
-                                    <textarea id="product-description" class="form-control" rows="3"
-                                        placeholder="Describe your product, farming process, freshness..."></textarea>
+                                <div class="form-group">
+                                    <label for="product-available">Availability Status</label>
+                                    <select id="product-available" class="form-control">
+                                        <option value="true">Active & Visible in Marketplace</option>
+                                        <option value="false">Hidden / Inactive</option>
+                                    </select>
                                 </div>
 
                                 <div class="form-group full">
-                                    <label>Product Image</label>
+                                    <label for="product-description">Description & Harvest Details</label>
+                                    <textarea id="product-description" class="form-control" rows="3"
+                                        placeholder="Describe produce freshness, harvesting date, natural farming practices..."></textarea>
+                                </div>
+
+                                <div class="form-group full">
+                                    <label>Product Photography</label>
                                     <div class="upload-area" id="upload-area">
                                         <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                                        <p style="font-size:13px; font-weight:600; color:var(--text-dark);">Click or
-                                            Drag Image Here</p>
+                                        <p style="font-size:13px; font-weight:600; color:var(--text-dark);">Click or Drag Produce Image Here</p>
                                         <p style="font-size:11px; color:var(--text-muted);">Supports PNG, JPG, WEBP</p>
                                         <input type="file" id="product-image" accept="image/*" style="display:none;">
                                     </div>
@@ -1755,10 +2390,13 @@
                                 </div>
                             </div>
 
-                            <div style="display:flex; gap:12px; margin-top:20px; justify-content:flex-end;">
-                                <button type="button" class="sidebar-logout" style="width:auto; padding:10px 20px;"
-                                    onclick="farmer.resetProductForm()">Cancel</button>
-                                <button type="submit" class="btn-add-product">Save Product</button>
+                            <div style="display:flex; gap:12px; margin-top:24px; justify-content:flex-end; border-top:1px solid var(--beige-mid); padding-top:18px;">
+                                <button type="button" class="btn-refresh-catalog" onclick="farmer.closeProductModal()">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="btn-add-product" id="btn-save-product">
+                                    <i class="fas fa-check"></i> Save Produce Listing
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -1940,6 +2578,23 @@
                 return;
             }
             farmer.init();
+
+            // Backdrop click to close product modal
+            const prodModal = document.getElementById('product-modal');
+            if (prodModal) {
+                prodModal.addEventListener('click', function(e) {
+                    if (e.target === prodModal) {
+                        farmer.closeProductModal();
+                    }
+                });
+            }
+
+            // ESC key to close modal
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    farmer.closeProductModal();
+                }
+            });
         });
     </script>
 </body>
