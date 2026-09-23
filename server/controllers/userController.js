@@ -312,6 +312,64 @@ const getProductReviews = async (req, res) => {
     }
 };
 
+const getFarmerReviews = async (req, res) => {
+    try {
+        const farmerId = req.userId;
+
+        const [reviews] = await pool.query(
+            `SELECT r.id, r.product_id, r.customer_id, r.rating, r.comment, r.created_at,
+                    p.name as product_name, p.image_url as product_image, p.price as product_price,
+                    u.name as customer_name, u.email as customer_email, u.profile_image as customer_avatar
+             FROM reviews r
+             JOIN products p ON r.product_id = p.id
+             JOIN users u ON r.customer_id = u.id
+             WHERE p.farmer_id = ?
+             ORDER BY r.created_at DESC`,
+            [farmerId]
+        );
+
+        const [summary] = await pool.query(
+            `SELECT AVG(r.rating) as average, COUNT(*) as total
+             FROM reviews r
+             JOIN products p ON r.product_id = p.id
+             WHERE p.farmer_id = ?`,
+            [farmerId]
+        );
+
+        const [ratingDist] = await pool.query(
+            `SELECT r.rating, COUNT(*) as count
+             FROM reviews r
+             JOIN products p ON r.product_id = p.id
+             WHERE p.farmer_id = ?
+             GROUP BY r.rating`,
+            [farmerId]
+        );
+
+        const ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        ratingDist.forEach(row => {
+            if (row.rating >= 1 && row.rating <= 5) {
+                ratingCounts[row.rating] = row.count;
+            }
+        });
+
+        res.json({
+            success: true,
+            reviews,
+            averageRating: parseFloat(summary[0]?.average || 0).toFixed(1),
+            totalReviews: summary[0]?.total || 0,
+            ratingCounts
+        });
+
+    } catch (error) {
+        console.error('Get farmer reviews error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching farmer reviews',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     updateProfile,
     getProfile,
@@ -319,5 +377,6 @@ module.exports = {
     addToWishlist,
     removeFromWishlist,
     addReview,
-    getProductReviews
+    getProductReviews,
+    getFarmerReviews
 };

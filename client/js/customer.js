@@ -79,11 +79,6 @@ const customer = {
             }, 400);
         }
 
-        // Preload initial dashboard data
-        this.loadDashboardProducts();
-        this.loadOrders();
-        this.loadWishlist();
-        this.loadProfile();
     },
 
     setupNavigation() {

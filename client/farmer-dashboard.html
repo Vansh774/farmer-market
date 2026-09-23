@@ -18,11 +18,6 @@
     <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-    <!-- Leaflet.js CSS for Live Delivery Maps -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         /* ============================================================
@@ -1053,89 +1048,18 @@
             }
         }
 
-        /* ============================================================
-           PROFESSIONAL FARMER PRODUCT CATALOG SUITE
-           ============================================================ */
-        .products-page-topbar {
+        /* Products Management Page */
+        .products-page-header {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             justify-content: space-between;
-            gap: 16px;
             margin-bottom: 24px;
-            flex-wrap: wrap;
-        }
-
-        .products-breadcrumbs {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-bottom: 6px;
-        }
-        .products-breadcrumbs a {
-            color: var(--text-muted);
-            text-decoration: none;
-            transition: color var(--t-fast);
-        }
-        .products-breadcrumbs a:hover {
-            color: var(--green-primary);
-        }
-
-        .products-heading-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .products-heading-title {
-            font-family: var(--font-serif);
-            font-size: 26px;
-            font-weight: 700;
-            color: var(--text-dark);
-            margin: 0;
-            line-height: 1.2;
-        }
-        .products-total-badge {
-            background: var(--green-pale);
-            color: var(--green-primary);
-            font-size: 12px;
-            font-weight: 600;
-            padding: 4px 12px;
-            border-radius: var(--radius-pill);
-            border: 1px solid rgba(53, 92, 36, 0.2);
-        }
-
-        .products-top-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .btn-refresh-catalog {
-            background: var(--white);
-            border: 1px solid var(--beige-mid);
-            color: var(--text-dark);
-            padding: 10px 18px;
-            border-radius: var(--radius-pill);
-            font-size: 13px;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: all var(--t-fast);
-        }
-        .btn-refresh-catalog:hover {
-            background: var(--beige);
-            color: var(--green-primary);
-            border-color: var(--green-soft);
         }
 
         .btn-add-product {
             background: var(--green-primary);
             color: white;
-            padding: 11px 22px;
+            padding: 12px 24px;
             border-radius: var(--radius-pill);
             font-size: 13.5px;
             font-weight: 600;
@@ -1144,516 +1068,78 @@
             gap: 8px;
             box-shadow: 0 4px 14px rgba(53, 92, 36, 0.25);
             transition: all var(--t-fast);
-            cursor: pointer;
-            border: none;
         }
+
         .btn-add-product:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(53, 92, 36, 0.35);
-            background: var(--green-secondary);
         }
 
-        /* 4-Metric KPI Inventory Strip */
-        .products-kpi-strip {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
+        /* Product item row */
+        .product-item {
+            display: flex;
+            align-items: center;
             gap: 16px;
-            margin-bottom: 24px;
-        }
-        @media (max-width: 992px) {
-            .products-kpi-strip { grid-template-columns: repeat(2, 1fr); }
-        }
-        @media (max-width: 576px) {
-            .products-kpi-strip { grid-template-columns: 1fr; }
-        }
-
-        .product-kpi-card {
-            background: var(--white);
-            border: 1px solid var(--beige);
-            border-radius: var(--radius-lg);
-            padding: 16px 18px;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            box-shadow: 0 2px 8px rgba(31, 33, 27, 0.03);
-            transition: all var(--t-fast) var(--ease-out);
-        }
-        .product-kpi-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-            border-color: var(--beige-mid);
-        }
-        .product-kpi-icon {
-            width: 46px;
-            height: 46px;
+            background: var(--cream-light);
+            border: 1px solid var(--beige-mid);
             border-radius: var(--radius-md);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 19px;
-            flex-shrink: 0;
-        }
-        .product-kpi-num {
-            font-family: var(--font-serif);
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--text-dark);
-            line-height: 1.1;
-        }
-        .product-kpi-label {
-            font-size: 11.5px;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            margin-top: 2px;
-        }
-        .product-kpi-sub {
-            font-size: 11px;
-            color: var(--text-light);
-            margin-top: 2px;
+            padding: 16px;
+            margin-bottom: 12px;
         }
 
-        /* Filter & Control Toolbar */
-        .products-control-toolbar {
-            background: var(--white);
-            border: 1px solid var(--beige);
-            border-radius: var(--radius-lg);
-            padding: 16px 20px;
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 14px;
-            flex-wrap: wrap;
-            box-shadow: 0 2px 8px rgba(31, 33, 27, 0.02);
-        }
-        .products-search-wrap {
-            position: relative;
-            flex: 1;
-            min-width: 240px;
-            max-width: 360px;
-        }
-        .products-search-wrap i {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-light);
-            font-size: 13px;
-            pointer-events: none;
-        }
-        .products-search-input {
-            width: 100%;
-            padding: 10px 34px 10px 38px;
-            border: 1px solid var(--beige-mid);
-            border-radius: var(--radius-pill);
-            font-size: 13px;
-            font-family: var(--font-sans);
-            background: var(--cream-light);
-            color: var(--text-dark);
-            transition: all var(--t-fast);
-        }
-        .products-search-input:focus {
-            outline: none;
-            border-color: var(--green-primary);
-            background: var(--white);
-            box-shadow: 0 0 0 3px rgba(53, 92, 36, 0.12);
-        }
-        .products-search-clear {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: var(--text-light);
-            cursor: pointer;
-            font-size: 12px;
-            padding: 4px;
-            display: none;
-        }
-        .products-search-clear:hover { color: var(--text-dark); }
-
-        .products-filters-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .product-select-filter {
-            padding: 9px 14px;
-            border: 1px solid var(--beige-mid);
-            border-radius: var(--radius-pill);
-            background: var(--cream-light);
-            font-size: 12.5px;
-            font-weight: 500;
-            color: var(--text-dark);
-            cursor: pointer;
-            transition: all var(--t-fast);
-        }
-        .product-select-filter:focus {
-            outline: none;
-            border-color: var(--green-primary);
-            background: var(--white);
-        }
-
-        .product-view-toggle {
-            display: inline-flex;
-            background: var(--cream);
-            border: 1px solid var(--beige-mid);
-            border-radius: var(--radius-pill);
-            padding: 3px;
-            gap: 2px;
-        }
-        .product-view-btn {
-            border: none;
-            background: transparent;
-            color: var(--text-muted);
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 13px;
-            transition: all var(--t-fast);
-        }
-        .product-view-btn.active {
-            background: var(--white);
-            color: var(--green-primary);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-            font-weight: 700;
-        }
-
-        /* Product Cards Grid Mode */
-        .farmer-products-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-            gap: 22px;
-        }
-
-        .farmer-prod-card {
-            background: var(--white);
-            border: 1px solid var(--beige);
-            border-radius: 18px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            transition: all var(--t-med) var(--ease-out);
-            box-shadow: 0 2px 10px rgba(31, 33, 27, 0.03);
-            position: relative;
-        }
-        .farmer-prod-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 30px rgba(31, 33, 27, 0.08);
-            border-color: var(--beige-mid);
-        }
-
-        .farmer-prod-img-wrap {
-            position: relative;
-            width: 100%;
-            height: 180px;
-            background: var(--cream);
-            overflow: hidden;
-        }
-        .farmer-prod-img {
-            width: 100%;
-            height: 100%;
+        .product-item img {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
             object-fit: cover;
-            transition: transform 0.5s ease;
-        }
-        .farmer-prod-card:hover .farmer-prod-img {
-            transform: scale(1.06);
+            background: var(--beige);
         }
 
-        .farmer-prod-cat-pill {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            padding: 4px 10px;
-            border-radius: var(--radius-pill);
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--green-primary);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-            letter-spacing: 0.02em;
-        }
-
-        .farmer-prod-status-pill {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            padding: 4px 10px;
-            border-radius: var(--radius-pill);
-            font-size: 11px;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-            transition: all var(--t-fast);
-            border: 1px solid transparent;
-        }
-        .farmer-prod-status-pill.available {
-            background: #D6E4B8;
-            color: #355C24;
-            border-color: #B5CE85;
-        }
-        .farmer-prod-status-pill.unavailable {
-            background: #FEE2E2;
-            color: #DC2626;
-            border-color: #FCA5A5;
-        }
-        .farmer-prod-status-pill:hover {
-            transform: scale(1.05);
-        }
-
-        .farmer-prod-body {
-            padding: 18px;
-            display: flex;
-            flex-direction: column;
+        .product-item .info {
             flex: 1;
         }
-        .farmer-prod-title {
+
+        .product-item .info h4 {
             font-family: var(--font-serif);
-            font-size: 17px;
-            font-weight: 700;
+            font-size: 16px;
+            font-weight: 600;
             color: var(--text-dark);
             margin-bottom: 4px;
-            line-height: 1.3;
-        }
-        .farmer-prod-desc {
-            font-size: 12px;
-            color: var(--text-muted);
-            line-height: 1.4;
-            margin-bottom: 12px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            min-height: 34px;
         }
 
-        .farmer-prod-pricing-row {
-            display: flex;
-            align-items: baseline;
-            justify-content: space-between;
-            margin-bottom: 14px;
-            padding-bottom: 12px;
-            border-bottom: 1px dashed var(--beige-mid);
-        }
-        .farmer-prod-price {
-            font-family: var(--font-serif);
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--green-primary);
-        }
-        .farmer-prod-unit {
-            font-size: 12px;
-            color: var(--text-muted);
-            font-weight: 400;
-        }
-        .farmer-prod-sold {
-            font-size: 11.5px;
-            font-weight: 600;
-            color: var(--text-muted);
-            background: var(--cream);
-            padding: 3px 8px;
-            border-radius: var(--radius-pill);
-        }
-
-        /* Stock progress meter */
-        .farmer-prod-stock-wrap {
-            margin-bottom: 16px;
-        }
-        .farmer-prod-stock-meta {
-            display: flex;
-            justify-content: space-between;
-            font-size: 11.5px;
-            font-weight: 600;
-            margin-bottom: 6px;
-        }
-        .stock-level-healthy { color: #2E7D32; }
-        .stock-level-low { color: #D97706; }
-        .stock-level-out { color: #DC2626; }
-
-        .farmer-prod-stock-bar {
-            width: 100%;
-            height: 6px;
-            background: var(--cream);
-            border-radius: var(--radius-pill);
-            overflow: hidden;
-        }
-        .farmer-prod-stock-fill {
-            height: 100%;
-            border-radius: var(--radius-pill);
-            transition: width 0.5s ease;
-        }
-        .farmer-prod-stock-fill.healthy { background: linear-gradient(90deg, #6F9638, #355C24); }
-        .farmer-prod-stock-fill.low { background: linear-gradient(90deg, #FBBF75, #F28C28); }
-        .farmer-prod-stock-fill.out { background: #DC2626; }
-
-        /* Card Actions */
-        .farmer-prod-actions {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: auto;
-        }
-        .btn-prod-edit {
-            flex: 1;
-            padding: 9px 12px;
-            background: var(--cream-light);
-            border: 1px solid var(--beige-mid);
-            border-radius: var(--radius-pill);
+        .product-item .info p {
             font-size: 12.5px;
-            font-weight: 600;
-            color: var(--text-dark);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            cursor: pointer;
-            transition: all var(--t-fast);
-        }
-        .btn-prod-edit:hover {
-            background: var(--green-pale);
-            color: var(--green-primary);
-            border-color: var(--green-soft);
-        }
-        .btn-prod-delete {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: var(--cream-light);
-            border: 1px solid var(--beige-mid);
             color: var(--text-muted);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 13px;
-            transition: all var(--t-fast);
-        }
-        .btn-prod-delete:hover {
-            background: #FEE2E2;
-            color: #DC2626;
-            border-color: #FCA5A5;
         }
 
-        /* Products Table Mode */
-        .farmer-products-table-wrap {
-            background: var(--white);
-            border: 1px solid var(--beige);
-            border-radius: 18px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(31, 33, 27, 0.03);
-        }
-        .farmer-products-table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 13px;
-        }
-        .farmer-products-table th {
-            background: var(--cream);
-            padding: 14px 18px;
-            font-size: 11.5px;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            border-bottom: 1px solid var(--beige-mid);
-        }
-        .farmer-products-table td {
-            padding: 14px 18px;
-            border-bottom: 1px solid var(--beige);
-            color: var(--text-dark);
-            vertical-align: middle;
-        }
-        .farmer-products-table tr:hover td {
-            background: var(--cream-light);
-        }
-        .farmer-products-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        /* Modal Overlay & Editor Window */
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(31, 33, 27, 0.6);
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-            z-index: 2500;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.25s ease, visibility 0.25s ease;
-        }
-        .modal-overlay.open {
-            display: flex !important;
-            opacity: 1 !important;
-            visibility: visible !important;
-            animation: modalFadeIn 0.25s var(--ease-out);
-        }
-        @keyframes modalFadeIn {
-            from { opacity: 0; transform: scale(0.96); }
-            to { opacity: 1; transform: scale(1); }
-        }
-        .product-modal-box {
-            background: var(--cream-light);
-            border-radius: 22px;
-            width: 100%;
-            max-width: 740px;
-            max-height: 90vh;
-            overflow-y: auto;
-            padding: 30px;
-            box-shadow: 0 20px 50px rgba(31, 33, 27, 0.25);
-            border: 1px solid var(--beige);
-            position: relative;
-        }
-        .product-modal-head {
+        .product-item .actions {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding-bottom: 18px;
-            border-bottom: 1px solid var(--beige-mid);
-            margin-bottom: 22px;
+            gap: 8px;
         }
-        .product-modal-title {
-            font-family: var(--font-serif);
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--text-dark);
-            margin: 0;
-        }
-        .product-modal-close {
+
+        .btn-icon-sm {
             width: 34px;
             height: 34px;
             border-radius: 50%;
-            background: var(--white);
             border: 1px solid var(--beige-mid);
-            color: var(--text-muted);
-            display: inline-flex;
+            background: var(--white);
+            display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
+            color: var(--text-dark);
             transition: all var(--t-fast);
         }
-        .product-modal-close:hover {
-            background: var(--beige);
-            color: var(--text-dark);
+
+        .btn-icon-sm:hover {
+            border-color: var(--green-primary);
+            color: var(--green-primary);
+            transform: scale(1.08);
+        }
+
+        .btn-icon-sm.danger:hover {
+            border-color: #DC2626;
+            color: #DC2626;
         }
 
         /* Form Styles */
@@ -1827,6 +1313,596 @@
             .sub-grid-2 {
                 grid-template-columns: 1fr;
             }
+        }
+
+        /* ============================================================
+           PROFESSIONAL FARMER EXPANDED SUITE: PRODUCTS, ORDERS, CATS, REVIEWS, REPORTS
+           ============================================================ */
+        .pro-kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+        .pro-kpi-card {
+            background: var(--white);
+            border: 1px solid var(--beige-mid);
+            border-radius: 16px;
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: var(--shadow-sm);
+            transition: transform var(--t-fast) var(--ease-out);
+        }
+        .pro-kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .pro-kpi-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .pro-kpi-val {
+            font-family: var(--font-serif);
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-dark);
+            line-height: 1.1;
+        }
+        .pro-kpi-label {
+            font-size: 11.5px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Control Toolbar */
+        .pro-toolbar {
+            background: var(--white);
+            border: 1px solid var(--beige-mid);
+            border-radius: 14px;
+            padding: 12px 16px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+        .pro-toolbar-left, .pro-toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .pro-search-box {
+            position: relative;
+            min-width: 240px;
+        }
+        .pro-search-box i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+            font-size: 13px;
+        }
+        .pro-search-box input {
+            width: 100%;
+            padding: 9px 14px 9px 36px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--beige-mid);
+            background: var(--cream);
+            font-family: var(--font-sans);
+            font-size: 12.5px;
+            color: var(--text-dark);
+            outline: none;
+            transition: all var(--t-fast);
+        }
+        .pro-search-box input:focus {
+            background: var(--white);
+            border-color: var(--green-primary);
+            box-shadow: 0 0 0 3px rgba(53, 92, 36, 0.1);
+        }
+        .pro-filter-select {
+            padding: 8px 14px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--beige-mid);
+            background: var(--cream);
+            font-family: var(--font-sans);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-dark);
+            outline: none;
+            cursor: pointer;
+        }
+        .view-switch-btns {
+            display: flex;
+            background: var(--cream);
+            border: 1px solid var(--beige-mid);
+            border-radius: var(--radius-pill);
+            padding: 2px;
+        }
+        .view-switch-btn {
+            border: none;
+            background: transparent;
+            padding: 6px 12px;
+            border-radius: var(--radius-pill);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all var(--t-fast);
+        }
+        .view-switch-btn.active {
+            background: var(--white);
+            color: var(--green-primary);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        }
+
+        /* Products Grid Mode */
+        .farmer-products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 18px;
+            margin-bottom: 30px;
+        }
+        .product-card-pro {
+            background: var(--white);
+            border: 1px solid var(--beige-mid);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+            transition: all var(--t-fast) var(--ease-out);
+            position: relative;
+        }
+        .product-card-pro:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--green-soft);
+        }
+        .product-card-pro-top {
+            height: 170px;
+            position: relative;
+            background: var(--cream);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .product-card-pro-top img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s var(--ease-out);
+        }
+        .product-card-pro:hover .product-card-pro-top img {
+            transform: scale(1.06);
+        }
+        .product-card-pro-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 4px 10px;
+            border-radius: var(--radius-pill);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+        }
+        .product-card-pro-body {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        .product-card-pro-cat {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--orange);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .product-card-pro-title {
+            font-family: var(--font-serif);
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+        .product-card-pro-price {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--green-primary);
+            margin-bottom: 12px;
+        }
+        .product-card-pro-price span {
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--text-muted);
+        }
+        .stock-progress-wrap {
+            margin-bottom: 14px;
+        }
+        .stock-progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11.5px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .stock-progress-track {
+            height: 6px;
+            background: var(--cream);
+            border-radius: var(--radius-pill);
+            overflow: hidden;
+        }
+        .stock-progress-bar {
+            height: 100%;
+            border-radius: var(--radius-pill);
+            background: var(--green-secondary);
+        }
+        .stock-progress-bar.low { background: #EAB308; }
+        .stock-progress-bar.out { background: #EF4444; }
+
+        .product-card-pro-actions {
+            margin-top: auto;
+            padding-top: 12px;
+            border-top: 1px solid var(--beige);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .stock-stepper-btns {
+            display: flex;
+            align-items: center;
+            border: 1px solid var(--beige-mid);
+            border-radius: var(--radius-pill);
+            background: var(--cream);
+            overflow: hidden;
+        }
+        .stock-stepper-btn {
+            border: none;
+            background: transparent;
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 11px;
+            color: var(--text-dark);
+            transition: background var(--t-fast);
+        }
+        .stock-stepper-btn:hover { background: var(--beige-mid); }
+        .stock-stepper-val {
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 0 4px;
+            min-width: 24px;
+            text-align: center;
+            color: var(--text-dark);
+        }
+
+        /* Products Table Mode */
+        .pro-data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .pro-data-table th {
+            text-align: left;
+            padding: 12px 14px;
+            background: var(--cream);
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            border-bottom: 1px solid var(--beige-mid);
+        }
+        .pro-data-table td {
+            padding: 14px;
+            border-bottom: 1px solid var(--beige);
+            vertical-align: middle;
+        }
+        .pro-data-table tr:hover td {
+            background: #FAF7F0;
+        }
+
+        /* Order Cards Pro */
+        .order-card-pro {
+            background: var(--white);
+            border: 1px solid var(--beige-mid);
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 18px;
+            box-shadow: var(--shadow-sm);
+            transition: all var(--t-fast) var(--ease-out);
+        }
+        .order-card-pro:hover {
+            border-color: var(--green-soft);
+            box-shadow: var(--shadow-md);
+        }
+        .order-card-pro-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--beige);
+            margin-bottom: 16px;
+        }
+        .order-card-pro-id {
+            font-family: var(--font-serif);
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .order-copy-btn {
+            background: var(--cream);
+            border: 1px solid var(--beige-mid);
+            border-radius: var(--radius-pill);
+            padding: 3px 8px;
+            font-size: 11px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all var(--t-fast);
+        }
+        .order-copy-btn:hover {
+            background: var(--beige-mid);
+            color: var(--text-dark);
+        }
+
+        /* Order Stepper */
+        .order-stepper-pro {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            margin: 16px 0 20px;
+            padding: 0 10px;
+        }
+        .order-stepper-track {
+            position: absolute;
+            top: 14px;
+            left: 20px;
+            right: 20px;
+            height: 3px;
+            background: var(--beige-mid);
+            z-index: 1;
+        }
+        .order-stepper-fill {
+            height: 100%;
+            background: var(--green-primary);
+            transition: width 0.4s var(--ease-out);
+        }
+        .order-step-node {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .order-step-circle {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--white);
+            border: 2px solid var(--beige-mid);
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            transition: all var(--t-fast);
+        }
+        .order-step-node.completed .order-step-circle {
+            background: var(--green-primary);
+            border-color: var(--green-primary);
+            color: var(--white);
+        }
+        .order-step-node.current .order-step-circle {
+            background: var(--white);
+            border-color: var(--orange);
+            color: var(--orange);
+            box-shadow: 0 0 0 4px rgba(242, 140, 40, 0.18);
+        }
+        .order-step-label {
+            font-size: 10.5px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-top: 6px;
+            white-space: nowrap;
+        }
+        .order-step-node.completed .order-step-label,
+        .order-step-node.current .order-step-label {
+            color: var(--text-dark);
+            font-weight: 700;
+        }
+
+        /* Category Cards Pro */
+        .categories-grid-pro {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+        .category-card-pro {
+            background: var(--white);
+            border: 1px solid var(--beige-mid);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+            transition: all var(--t-fast) var(--ease-out);
+        }
+        .category-card-pro:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--green-soft);
+        }
+        .cat-card-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+        .cat-card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: var(--green-pale);
+            color: var(--green-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .cat-card-title {
+            font-family: var(--font-serif);
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+        .cat-card-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 12px;
+            background: var(--cream);
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+        .cat-card-stat-val {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+        .cat-card-stat-lbl {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* Review Cards Pro */
+        .reviews-overview-box {
+            background: var(--white);
+            border: 1px solid var(--beige-mid);
+            border-radius: 18px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm);
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 28px;
+            align-items: center;
+        }
+        .rating-hero-score {
+            text-align: center;
+            padding-right: 24px;
+            border-right: 1px solid var(--beige);
+        }
+        .rating-hero-num {
+            font-family: var(--font-serif);
+            font-size: 48px;
+            font-weight: 800;
+            color: var(--text-dark);
+            line-height: 1;
+        }
+        .rating-hero-stars {
+            color: #F59E0B;
+            font-size: 18px;
+            margin: 8px 0;
+        }
+        .star-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .star-bar-track {
+            flex: 1;
+            height: 7px;
+            background: var(--cream);
+            border-radius: var(--radius-pill);
+            overflow: hidden;
+        }
+        .star-bar-fill {
+            height: 100%;
+            background: #F59E0B;
+            border-radius: var(--radius-pill);
+        }
+
+        .reviews-feed-pro {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .review-card-pro {
+            background: var(--white);
+            border: 1px solid var(--beige-mid);
+            border-radius: 16px;
+            padding: 18px 20px;
+            box-shadow: var(--shadow-sm);
+            transition: transform var(--t-fast);
+        }
+        .review-card-pro:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .review-card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .review-cust-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .review-cust-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--green-pale);
+            color: var(--green-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        /* Reports Pro */
+        .reports-charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        @media (max-width: 992px) {
+            .reports-charts-grid { grid-template-columns: 1fr; }
+            .reviews-overview-box { grid-template-columns: 1fr; }
+            .rating-hero-score { border-right: none; border-bottom: 1px solid var(--beige); padding-bottom: 16px; }
         }
     </style>
 </head>
@@ -2174,160 +2250,118 @@
 
                     </div>
 
-                          <!-- PAGE: PRODUCTS (Professional Farm Inventory & Catalog) -->
+                </div>
+
+                <!-- PAGE: PRODUCTS -->
                 <div id="page-products" class="page-content">
-                    
-                    <!-- Top Bar with Title, Counts & Actions -->
-                    <div class="products-page-topbar">
+                    <div class="products-page-header">
                         <div>
-                            <div class="products-breadcrumbs">
-                                <a href="#" onclick="farmer.showPage('dashboard')"><i class="fas fa-home"></i> Farm Dashboard</a>
-                                <span>/</span>
-                                <span>Product Management</span>
-                            </div>
-                            <div class="products-heading-row">
-                                <h2 class="products-heading-title">Product Catalog</h2>
-                                <span class="products-total-badge" id="products-count-badge">Loading...</span>
-                            </div>
-                            <p style="font-size:13px; color:var(--text-muted); margin-top:4px;">
-                                Manage your farm produce listings, pricing, live inventory stock, and catalog visibility.
-                            </p>
+                            <h2 style="font-family:var(--font-serif); font-size:26px; color:var(--text-dark); margin-bottom:4px;">Product Catalog & Inventory</h2>
+                            <p style="font-size:13.5px; color:var(--text-muted);">Manage your farm produce listings, prices, stock levels, and store visibility.</p>
                         </div>
-                        <div class="products-top-actions">
-                            <button class="btn-refresh-catalog" onclick="farmer.loadProducts()" title="Reload catalog">
-                                <i class="fas fa-sync-alt" id="refresh-products-icon"></i> Refresh
-                            </button>
-                            <button class="btn-add-product" onclick="farmer.showAddProductForm()">
-                                <i class="fas fa-plus-circle"></i> Add New Product
-                            </button>
-                        </div>
+                        <button class="btn-add-product" onclick="farmer.showAddProductForm()">
+                            <i class="fas fa-plus"></i> Add New Produce
+                        </button>
                     </div>
 
-                    <!-- 4-Metric KPI Inventory Strip -->
-                    <div class="products-kpi-strip">
-                        <div class="product-kpi-card">
-                            <div class="product-kpi-icon" style="background:#EAF0DF; color:var(--green-primary);">
-                                <i class="fas fa-boxes-stacked"></i>
-                            </div>
+                    <!-- Products Inventory KPI Strip -->
+                    <div class="pro-kpi-strip">
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#EAF0DF; color:#355C24;"><i class="fas fa-seedling"></i></div>
                             <div>
-                                <div class="product-kpi-num" id="prod-stat-total">0</div>
-                                <div class="product-kpi-label">Active Listings</div>
-                                <div class="product-kpi-sub">Total catalog items</div>
+                                <div class="pro-kpi-val" id="prod-kpi-total">0</div>
+                                <div class="pro-kpi-label">Total Listed Crops</div>
                             </div>
                         </div>
-
-                        <div class="product-kpi-card">
-                            <div class="product-kpi-icon" style="background:#D6E4B8; color:#355C24;">
-                                <i class="fas fa-check-circle"></i>
-                            </div>
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#D6E4B8; color:#355C24;"><i class="fas fa-check-circle"></i></div>
                             <div>
-                                <div class="product-kpi-num" id="prod-stat-healthy">0</div>
-                                <div class="product-kpi-label">In Stock</div>
-                                <div class="product-kpi-sub">Healthy inventory levels</div>
+                                <div class="pro-kpi-val" id="prod-kpi-avail">0</div>
+                                <div class="pro-kpi-label">Active & Available</div>
                             </div>
                         </div>
-
-                        <div class="product-kpi-card">
-                            <div class="product-kpi-icon" style="background:#FEE2E2; color:#DC2626;">
-                                <i class="fas fa-triangle-exclamation"></i>
-                            </div>
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#FEF3C7; color:#D97706;"><i class="fas fa-exclamation-triangle"></i></div>
                             <div>
-                                <div class="product-kpi-num" id="prod-stat-low">0</div>
-                                <div class="product-kpi-label">Low / Out of Stock</div>
-                                <div class="product-kpi-sub">Needs farmer restock</div>
+                                <div class="pro-kpi-val" id="prod-kpi-low">0</div>
+                                <div class="pro-kpi-label">Low Stock (&lt; 25)</div>
                             </div>
                         </div>
-
-                        <div class="product-kpi-card">
-                            <div class="product-kpi-icon" style="background:#FDE8D0; color:#D97706;">
-                                <i class="fas fa-coins"></i>
-                            </div>
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#FEE2E2; color:#DC2626;"><i class="fas fa-times-circle"></i></div>
                             <div>
-                                <div class="product-kpi-num" id="prod-stat-value">₹0.00</div>
-                                <div class="product-kpi-label">Gross Farm Valuation</div>
-                                <div class="product-kpi-sub">Retail inventory worth</div>
+                                <div class="pro-kpi-val" id="prod-kpi-out">0</div>
+                                <div class="pro-kpi-label">Out of Stock</div>
+                            </div>
+                        </div>
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#FCECDD; color:#F28C28;"><i class="fas fa-boxes-stacked"></i></div>
+                            <div>
+                                <div class="pro-kpi-val" id="prod-kpi-value">₹0.00</div>
+                                <div class="pro-kpi-label">Est. Inventory Value</div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Filter & View Controls Toolbar -->
-                    <div class="products-control-toolbar">
-                        <div class="products-search-wrap">
-                            <i class="fas fa-search"></i>
-                            <input type="text" id="product-search" class="products-search-input" 
-                                placeholder="Search produce by name, category, notes..." 
-                                oninput="farmer.filterProducts()">
-                            <button id="product-search-clear" class="products-search-clear" onclick="farmer.clearProductSearch()">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-
-                        <div class="products-filters-group">
-                            <select id="product-category-filter" class="product-select-filter" onchange="farmer.filterProducts()">
+                    <!-- Control Toolbar -->
+                    <div class="pro-toolbar">
+                        <div class="pro-toolbar-left">
+                            <div class="pro-search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="prod-search-input" oninput="farmer.filterProducts()" placeholder="Search crop or produce...">
+                            </div>
+                            <select id="prod-filter-category" onchange="farmer.filterProducts()" class="pro-filter-select">
                                 <option value="all">All Categories</option>
-                                <option value="Vegetables">Vegetables</option>
-                                <option value="Fruits">Fruits</option>
-                                <option value="Leafy Greens">Leafy Greens</option>
-                                <option value="Organic">Organic</option>
-                                <option value="Dairy & Farm Fresh">Dairy & Farm Fresh</option>
                             </select>
-
-                            <select id="product-stock-filter" class="product-select-filter" onchange="farmer.filterProducts()">
+                            <select id="prod-filter-stock" onchange="farmer.filterProducts()" class="pro-filter-select">
                                 <option value="all">All Stock Status</option>
-                                <option value="healthy">In Stock (&gt; 20)</option>
-                                <option value="low">Low Stock (&le; 20)</option>
-                                <option value="out">Out of Stock (0)</option>
-                                <option value="available">Active for Sale</option>
-                                <option value="hidden">Hidden / Paused</option>
+                                <option value="in_stock">In Stock (&gt; 0)</option>
+                                <option value="low_stock">Low Stock (&lt; 25)</option>
+                                <option value="out_of_stock">Out of Stock (0)</option>
+                                <option value="available">Available in Store</option>
+                                <option value="unavailable">Hidden / Unavailable</option>
                             </select>
-
-                            <select id="product-sort-filter" class="product-select-filter" onchange="farmer.filterProducts()">
-                                <option value="newest">Recently Added</option>
-                                <option value="price-asc">Price: Low to High</option>
-                                <option value="price-desc">Price: High to Low</option>
-                                <option value="stock-desc">Stock: High to Low</option>
-                                <option value="stock-asc">Stock: Low to High</option>
-                                <option value="name-asc">Name: A to Z</option>
+                            <select id="prod-sort" onchange="farmer.filterProducts()" class="pro-filter-select">
+                                <option value="newest">Newest Listed</option>
+                                <option value="price_asc">Price: Low to High</option>
+                                <option value="price_desc">Price: High to Low</option>
+                                <option value="stock_desc">Stock: High to Low</option>
+                                <option value="stock_asc">Stock: Low to High</option>
+                                <option value="name_asc">Name: A to Z</option>
                             </select>
-
-                            <div class="product-view-toggle">
-                                <button type="button" id="btn-view-grid" class="product-view-btn active" 
-                                    onclick="farmer.setProductViewMode('grid')" title="Card Grid View">
-                                    <i class="fas fa-th-large"></i>
+                        </div>
+                        <div class="pro-toolbar-right">
+                            <div class="view-switch-btns">
+                                <button id="btn-view-grid" onclick="farmer.setProductView('grid')" class="view-switch-btn active" title="Grid View">
+                                    <i class="fas fa-th-large"></i> Cards
                                 </button>
-                                <button type="button" id="btn-view-table" class="product-view-btn" 
-                                    onclick="farmer.setProductViewMode('table')" title="Detailed Table View">
-                                    <i class="fas fa-list"></i>
+                                <button id="btn-view-table" onclick="farmer.setProductView('table')" class="view-switch-btn" title="Table View">
+                                    <i class="fas fa-list"></i> Table
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Products Container (Rendered dynamically as Grid or Table) -->
+                    <!-- Products Display Area -->
                     <div id="farmer-products">
                         <p style="text-align:center; padding:30px; color:var(--text-muted);">Loading products...</p>
                     </div>
 
-                </div>
-
-                <!-- Product Add / Edit Modal Overlay -->
-                <div class="modal-overlay" id="product-modal">
-                    <div class="product-modal-box" id="product-form">
-                        <div class="product-modal-head">
-                            <h3 id="product-form-title" class="product-modal-title">Add New Farm Produce</h3>
-                            <button type="button" class="product-modal-close" onclick="farmer.closeProductModal()" title="Close">
-                                <i class="fas fa-times"></i>
+                    <!-- Product Form Section -->
+                    <div class="form-card" id="product-form" style="margin-top:30px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--beige); padding-bottom:12px;">
+                            <h3 id="product-form-title" style="font-family:var(--font-serif); font-size:22px; color:var(--text-dark);">Add New Product</h3>
+                            <button type="button" onclick="farmer.resetProductForm()" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:13px;">
+                                <i class="fas fa-times"></i> Clear Form
                             </button>
                         </div>
-
                         <form id="product-form-fields" onsubmit="event.preventDefault(); farmer.saveProduct();">
                             <input type="hidden" id="product-id">
 
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label for="product-name">Produce Name *</label>
-                                    <input type="text" id="product-name" class="form-control"
-                                        placeholder="e.g. Farm Fresh Vine Tomatoes" required>
+                                    <input type="text" id="product-name" class="form-control" placeholder="e.g. Farm Fresh Organic Vine Tomatoes" required>
                                 </div>
 
                                 <div class="form-group">
@@ -2339,22 +2373,23 @@
                                         <option value="Leafy Greens">Leafy Greens</option>
                                         <option value="Organic">Organic</option>
                                         <option value="Dairy & Farm Fresh">Dairy & Farm Fresh</option>
+                                        <option value="Grains & Pulses">Grains & Pulses</option>
+                                        <option value="Herbs & Seasoning">Herbs & Seasoning</option>
                                     </select>
                                 </div>
 
                                 <div class="form-group">
                                     <label for="product-price">Price (₹) *</label>
-                                    <input type="number" step="0.01" id="product-price" class="form-control"
-                                        placeholder="50.00" required>
+                                    <input type="number" step="0.01" id="product-price" class="form-control" placeholder="50.00" required>
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="product-quantity">Quantity in Stock *</label>
-                                    <input type="number" id="product-quantity" class="form-control" placeholder="100" required>
+                                    <label for="product-quantity">Initial Stock Quantity *</label>
+                                    <input type="number" id="product-quantity" class="form-control" placeholder="50" required>
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="product-unit">Selling Unit</label>
+                                    <label for="product-unit">Unit of Measurement *</label>
                                     <select id="product-unit" class="form-control">
                                         <option value="kg">Per kg</option>
                                         <option value="bunch">Per Bunch</option>
@@ -2364,39 +2399,26 @@
                                     </select>
                                 </div>
 
-                                <div class="form-group">
-                                    <label for="product-available">Availability Status</label>
-                                    <select id="product-available" class="form-control">
-                                        <option value="true">Active & Visible in Marketplace</option>
-                                        <option value="false">Hidden / Inactive</option>
-                                    </select>
+                                <div class="form-group full">
+                                    <label for="product-description">Description & Harvest Notes</label>
+                                    <textarea id="product-description" class="form-control" rows="3" placeholder="Describe taste, farming methods, freshness, pesticide-free verification..."></textarea>
                                 </div>
 
                                 <div class="form-group full">
-                                    <label for="product-description">Description & Harvest Details</label>
-                                    <textarea id="product-description" class="form-control" rows="3"
-                                        placeholder="Describe produce freshness, harvesting date, natural farming practices..."></textarea>
-                                </div>
-
-                                <div class="form-group full">
-                                    <label>Product Photography</label>
+                                    <label>Product Photograph</label>
                                     <div class="upload-area" id="upload-area">
                                         <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                                        <p style="font-size:13px; font-weight:600; color:var(--text-dark);">Click or Drag Produce Image Here</p>
-                                        <p style="font-size:11px; color:var(--text-muted);">Supports PNG, JPG, WEBP</p>
+                                        <p style="font-size:13px; font-weight:600; color:var(--text-dark);">Click or Drag Image Here</p>
+                                        <p style="font-size:11px; color:var(--text-muted);">Recommended 600x600 · Supports PNG, JPG, WEBP</p>
                                         <input type="file" id="product-image" accept="image/*" style="display:none;">
                                     </div>
-                                    <div id="upload-preview"></div>
+                                    <div id="upload-preview" style="margin-top:10px;"></div>
                                 </div>
                             </div>
 
-                            <div style="display:flex; gap:12px; margin-top:24px; justify-content:flex-end; border-top:1px solid var(--beige-mid); padding-top:18px;">
-                                <button type="button" class="btn-refresh-catalog" onclick="farmer.closeProductModal()">
-                                    Cancel
-                                </button>
-                                <button type="submit" class="btn-add-product" id="btn-save-product">
-                                    <i class="fas fa-check"></i> Save Produce Listing
-                                </button>
+                            <div style="display:flex; gap:12px; margin-top:24px; justify-content:flex-end;">
+                                <button type="button" class="sidebar-logout" style="width:auto; padding:10px 22px; background:var(--white); border:1.5px solid var(--beige-mid); color:var(--text-muted);" onclick="farmer.resetProductForm()">Cancel</button>
+                                <button type="submit" class="btn-add-product" style="padding:10px 24px;">Save & Publish Produce</button>
                             </div>
                         </form>
                     </div>
@@ -2406,24 +2428,349 @@
                 <div id="page-orders" class="page-content">
                     <div class="products-page-header">
                         <div>
-                            <h2 style="font-family:var(--font-serif); font-size:24px; color:var(--text-dark);">Order
-                                Management</h2>
-                            <p style="font-size:13px; color:var(--text-muted);">Track customer orders, update delivery
-                                status, and review receipts.</p>
+                            <h2 style="font-family:var(--font-serif); font-size:26px; color:var(--text-dark); margin-bottom:4px;">Order Management & Fulfillment</h2>
+                            <p style="font-size:13.5px; color:var(--text-muted);">Review customer requests, harvest produce, assign delivery agents, and track live routes.</p>
                         </div>
-                        <select id="order-filter" class="sales-period-select" onchange="farmer.loadOrders()">
-                            <option value="all">All Orders</option>
-                            <option value="pending">Pending</option>
-                            <option value="processing">Processing</option>
-                            <option value="shipped">Shipped</option>
-                            <option value="delivered">Delivered</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
+                        <button class="btn-balance-details" onclick="farmer.loadOrders()" style="background:var(--white); padding:8px 16px; border-radius:var(--radius-pill); cursor:pointer;">
+                            <i class="fas fa-sync-alt" style="margin-right:6px; color:var(--green-primary);"></i> Refresh Orders
+                        </button>
                     </div>
 
-                    <div class="orders-table-wrap">
-                        <div id="farmer-orders">
-                            <p style="text-align:center; padding:30px; color:var(--text-muted);">Loading orders...</p>
+                    <!-- Orders KPI Summary Strip -->
+                    <div class="pro-kpi-strip">
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#EAF0DF; color:#355C24;"><i class="fas fa-receipt"></i></div>
+                            <div>
+                                <div class="pro-kpi-val" id="orders-kpi-total">0</div>
+                                <div class="pro-kpi-label">Total Customer Orders</div>
+                            </div>
+                        </div>
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#FDE8D0; color:#D97706;"><i class="fas fa-bell"></i></div>
+                            <div>
+                                <div class="pro-kpi-val" id="orders-kpi-pending">0</div>
+                                <div class="pro-kpi-label">Needs Confirmation</div>
+                            </div>
+                        </div>
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#FEF3C7; color:#B45309;"><i class="fas fa-carrot"></i></div>
+                            <div>
+                                <div class="pro-kpi-val" id="orders-kpi-prep">0</div>
+                                <div class="pro-kpi-label">Harvesting / Packing</div>
+                            </div>
+                        </div>
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#E0F2FE; color:#0284C7;"><i class="fas fa-motorcycle"></i></div>
+                            <div>
+                                <div class="pro-kpi-val" id="orders-kpi-transit">0</div>
+                                <div class="pro-kpi-label">Dispatched / Transit</div>
+                            </div>
+                        </div>
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#D6E4B8; color:#355C24;"><i class="fas fa-box-open"></i></div>
+                            <div>
+                                <div class="pro-kpi-val" id="orders-kpi-delivered">0</div>
+                                <div class="pro-kpi-label">Delivered Fresh</div>
+                            </div>
+                        </div>
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#FCECDD; color:#F28C28;"><i class="fas fa-wallet"></i></div>
+                            <div>
+                                <div class="pro-kpi-val" id="orders-kpi-rev">₹0.00</div>
+                                <div class="pro-kpi-label">Gross Order Value</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Orders Filter Toolbar -->
+                    <div class="pro-toolbar">
+                        <div class="pro-toolbar-left">
+                            <div class="pro-search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="orders-search-input" oninput="farmer.filterOrders()" placeholder="Search order #, customer, or phone...">
+                            </div>
+                            <div class="view-switch-btns" id="orders-status-tabs">
+                                <button onclick="farmer.setOrderFilter('all')" class="view-switch-btn active" data-status="all">All</button>
+                                <button onclick="farmer.setOrderFilter('pending')" class="view-switch-btn" data-status="pending">Pending</button>
+                                <button onclick="farmer.setOrderFilter('confirmed')" class="view-switch-btn" data-status="confirmed">Confirmed</button>
+                                <button onclick="farmer.setOrderFilter('preparing')" class="view-switch-btn" data-status="preparing">Preparing</button>
+                                <button onclick="farmer.setOrderFilter('ready')" class="view-switch-btn" data-status="ready">Ready</button>
+                                <button onclick="farmer.setOrderFilter('out_for_delivery')" class="view-switch-btn" data-status="out_for_delivery">Dispatched</button>
+                                <button onclick="farmer.setOrderFilter('delivered')" class="view-switch-btn" data-status="delivered">Delivered</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Orders Container -->
+                    <div id="farmer-orders">
+                        <p style="text-align:center; padding:30px; color:var(--text-muted);">Loading orders...</p>
+                    </div>
+                </div>
+
+                <!-- PAGE: CATEGORIES -->
+                <div id="page-categories" class="page-content">
+                    <div class="products-page-header">
+                        <div>
+                            <h2 style="font-family:var(--font-serif); font-size:26px; color:var(--text-dark); margin-bottom:4px;">Produce Categories</h2>
+                            <p style="font-size:13.5px; color:var(--text-muted);">Organize crops by natural harvest families, review category performance, and target catalog growth.</p>
+                        </div>
+                        <button class="btn-add-product" onclick="farmer.showAddCategoryModal()">
+                            <i class="fas fa-folder-plus"></i> Add Category
+                        </button>
+                    </div>
+
+                    <!-- Categories KPI Strip -->
+                    <div class="pro-kpi-strip">
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#EAF0DF; color:#355C24;"><i class="fas fa-tags"></i></div>
+                            <div>
+                                <div class="pro-kpi-val" id="cat-kpi-count">0</div>
+                                <div class="pro-kpi-label">Active Categories</div>
+                            </div>
+                        </div>
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#FDE8D0; color:#D97706;"><i class="fas fa-trophy"></i></div>
+                            <div>
+                                <div class="pro-kpi-val" id="cat-kpi-top" style="font-size:18px;">Vegetables</div>
+                                <div class="pro-kpi-label">Top Category</div>
+                            </div>
+                        </div>
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#D6E4B8; color:#355C24;"><i class="fas fa-boxes-packing"></i></div>
+                            <div>
+                                <div class="pro-kpi-val" id="cat-kpi-units">0</div>
+                                <div class="pro-kpi-label">Total Category Stock</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Categories Grid -->
+                    <div class="categories-grid-pro" id="farmer-categories-grid">
+                        <p style="text-align:center; padding:30px; color:var(--text-muted); grid-column:1/-1;">Loading categories...</p>
+                    </div>
+                </div>
+
+                <!-- PAGE: REVIEWS -->
+                <div id="page-reviews" class="page-content">
+                    <div class="products-page-header">
+                        <div>
+                            <h2 style="font-family:var(--font-serif); font-size:26px; color:var(--text-dark); margin-bottom:4px;">Customer Reviews & Ratings</h2>
+                            <p style="font-size:13.5px; color:var(--text-muted);">Verified customer feedback, star ratings, and satisfaction ratings across your farm produce.</p>
+                        </div>
+                        <button class="btn-balance-details" onclick="farmer.loadReviews()" style="background:var(--white); padding:8px 16px; border-radius:var(--radius-pill); cursor:pointer;">
+                            <i class="fas fa-sync-alt" style="margin-right:6px; color:var(--green-primary);"></i> Refresh Feedback
+                        </button>
+                    </div>
+
+                    <!-- Rating Overview Scorecard -->
+                    <div class="reviews-overview-box">
+                        <div class="rating-hero-score">
+                            <div class="rating-hero-num" id="review-hero-avg">5.0</div>
+                            <div class="rating-hero-stars" id="review-hero-stars">
+                                <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                            </div>
+                            <div style="font-size:12px; color:var(--text-muted);">
+                                Based on <strong id="review-hero-count" style="color:var(--text-dark);">0</strong> verified reviews
+                            </div>
+                        </div>
+                        <div class="star-bars-col">
+                            <div class="star-bar-row">
+                                <span style="width:50px;">5 Stars</span>
+                                <div class="star-bar-track"><div class="star-bar-fill" id="star-bar-5" style="width: 100%;"></div></div>
+                                <span id="star-count-5" style="width:30px; text-align:right;">0</span>
+                            </div>
+                            <div class="star-bar-row">
+                                <span style="width:50px;">4 Stars</span>
+                                <div class="star-bar-track"><div class="star-bar-fill" id="star-bar-4" style="width: 0%;"></div></div>
+                                <span id="star-count-4" style="width:30px; text-align:right;">0</span>
+                            </div>
+                            <div class="star-bar-row">
+                                <span style="width:50px;">3 Stars</span>
+                                <div class="star-bar-track"><div class="star-bar-fill" id="star-bar-3" style="width: 0%;"></div></div>
+                                <span id="star-count-3" style="width:30px; text-align:right;">0</span>
+                            </div>
+                            <div class="star-bar-row">
+                                <span style="width:50px;">2 Stars</span>
+                                <div class="star-bar-track"><div class="star-bar-fill" id="star-bar-2" style="width: 0%;"></div></div>
+                                <span id="star-count-2" style="width:30px; text-align:right;">0</span>
+                            </div>
+                            <div class="star-bar-row">
+                                <span style="width:50px;">1 Star</span>
+                                <div class="star-bar-track"><div class="star-bar-fill" id="star-bar-1" style="width: 0%;"></div></div>
+                                <span id="star-count-1" style="width:30px; text-align:right;">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter Toolbar -->
+                    <div class="pro-toolbar">
+                        <div class="pro-toolbar-left">
+                            <select id="review-filter-stars" onchange="farmer.filterReviews()" class="pro-filter-select">
+                                <option value="all">All Star Ratings</option>
+                                <option value="5">5 Stars Only</option>
+                                <option value="4">4 Stars Only</option>
+                                <option value="3">3 Stars Only</option>
+                                <option value="2">2 Stars Only</option>
+                                <option value="1">1 Star Only</option>
+                            </select>
+                            <select id="review-filter-product" onchange="farmer.filterReviews()" class="pro-filter-select">
+                                <option value="all">All Farm Produce</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Reviews Feed -->
+                    <div class="reviews-feed-pro" id="farmer-reviews-feed">
+                        <p style="text-align:center; padding:30px; color:var(--text-muted);">Loading customer feedback...</p>
+                    </div>
+                </div>
+
+                <!-- PAGE: REPORTS -->
+                <div id="page-reports" class="page-content">
+                    <div class="products-page-header">
+                        <div>
+                            <h2 style="font-family:var(--font-serif); font-size:26px; color:var(--text-dark); margin-bottom:4px;">Financial & Farm Analytics Reports</h2>
+                            <p style="font-size:13.5px; color:var(--text-muted);">Comprehensive harvest sales records, revenue metrics, best-selling crops, and CSV export.</p>
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <button class="btn-balance-details" onclick="farmer.exportCSV()" style="background:#355C24; color:#fff; border:none; padding:9px 18px; font-size:12.5px; cursor:pointer; border-radius:var(--radius-pill); display:inline-flex; align-items:center; gap:6px;">
+                                <i class="fas fa-file-csv"></i> Export CSV Report
+                            </button>
+                            <button class="btn-balance-details" onclick="window.print()" style="background:#fff; border:1px solid var(--beige-mid); padding:9px 16px; font-size:12.5px; cursor:pointer; border-radius:var(--radius-pill); display:inline-flex; align-items:center; gap:6px;">
+                                <i class="fas fa-print"></i> Print Statement
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Reports Timeframe Filter Toolbar -->
+                    <div class="reports-filter-bar" style="display:flex; justify-content:space-between; align-items:center; background:var(--white); border:1px solid var(--beige-mid); padding:12px 18px; border-radius:16px; margin-bottom:22px; box-shadow:var(--shadow-sm); flex-wrap:wrap; gap:12px;">
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                            <span style="font-size:12.5px; font-weight:700; color:var(--text-dark); display:inline-flex; align-items:center; gap:6px;">
+                                <i class="fas fa-calendar-days" style="color:var(--green-primary);"></i> Filter Reports:
+                            </span>
+                            <div class="view-switch-btns" id="reports-timeframe-tabs">
+                                <button onclick="farmer.setReportsTimeframe('today')" class="view-switch-btn" data-timeframe="today">
+                                    <i class="fas fa-sun" style="font-size:11px;"></i> Today
+                                </button>
+                                <button onclick="farmer.setReportsTimeframe('1_month')" class="view-switch-btn active" data-timeframe="1_month">
+                                    1 Month
+                                </button>
+                                <button onclick="farmer.setReportsTimeframe('3_months')" class="view-switch-btn" data-timeframe="3_months">
+                                    3 Months
+                                </button>
+                                <button onclick="farmer.setReportsTimeframe('6_months')" class="view-switch-btn" data-timeframe="6_months">
+                                    6 Months
+                                </button>
+                                <button onclick="farmer.setReportsTimeframe('1_year')" class="view-switch-btn" data-timeframe="1_year">
+                                    1 Year
+                                </button>
+                                <button onclick="farmer.setReportsTimeframe('all')" class="view-switch-btn" data-timeframe="all">
+                                    All Time
+                                </button>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span id="reports-timeframe-label" style="font-size:12px; font-weight:600; color:var(--text-dark);">
+                                Showing: Last 30 Days
+                            </span>
+                            <span class="status-badge-pill delivered" id="reports-timeframe-pill" style="font-size:11px; padding:3px 10px;">
+                                1 Month Detail
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Reports Financial KPI Strip -->
+                    <div class="pro-kpi-strip">
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#EAF0DF; color:#355C24;"><i class="fas fa-indian-rupee-sign"></i></div>
+                            <div>
+                                <div class="pro-kpi-val" id="report-kpi-revenue">₹0.00</div>
+                                <div class="pro-kpi-label">Gross Farm Sales</div>
+                            </div>
+                        </div>
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#D6E4B8; color:#355C24;"><i class="fas fa-truck-ramp-box"></i></div>
+                            <div>
+                                <div class="pro-kpi-val" id="report-kpi-orders">0</div>
+                                <div class="pro-kpi-label">Orders Completed</div>
+                            </div>
+                        </div>
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#FDE8D0; color:#D97706;"><i class="fas fa-calculator"></i></div>
+                            <div>
+                                <div class="pro-kpi-val" id="report-kpi-aov">₹0.00</div>
+                                <div class="pro-kpi-label">Average Order Value (AOV)</div>
+                            </div>
+                        </div>
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#E0F2FE; color:#0284C7;"><i class="fas fa-basket-shopping"></i></div>
+                            <div>
+                                <div class="pro-kpi-val" id="report-kpi-units">0</div>
+                                <div class="pro-kpi-label">Total Units Sold</div>
+                            </div>
+                        </div>
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#FCECDD; color:#F28C28;"><i class="fas fa-warehouse"></i></div>
+                            <div>
+                                <div class="pro-kpi-val" id="report-kpi-inventory">₹0.00</div>
+                                <div class="pro-kpi-label">Current Asset Stock</div>
+                            </div>
+                        </div>
+                        <div class="pro-kpi-card">
+                            <div class="pro-kpi-icon" style="background:#FEE2E2; color:#DC2626;"><i class="fas fa-ban"></i></div>
+                            <div>
+                                <div class="pro-kpi-val" id="report-kpi-cancelled">0</div>
+                                <div class="pro-kpi-label">Cancelled Orders</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Analytics Charts Grid -->
+                    <div class="reports-charts-grid">
+                        <div class="form-card" style="padding:22px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                                <h3 style="font-family:var(--font-serif); font-size:18px; color:var(--text-dark);">Daily Revenue Trend</h3>
+                                <span style="font-size:12px; color:var(--text-muted);">Real-time ledger updates</span>
+                            </div>
+                            <div style="height:260px; position:relative;">
+                                <canvas id="chart-reports-sales"></canvas>
+                            </div>
+                        </div>
+                        <div class="form-card" style="padding:22px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                                <h3 style="font-family:var(--font-serif); font-size:18px; color:var(--text-dark);">Order Status Mix</h3>
+                                <span style="font-size:12px; color:var(--text-muted);">All Orders</span>
+                            </div>
+                            <div style="height:260px; position:relative;">
+                                <canvas id="chart-reports-status"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Best Selling Crops Table -->
+                    <div class="form-card" style="padding:22px; margin-bottom:30px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                            <h3 style="font-family:var(--font-serif); font-size:18px; color:var(--text-dark);">Top Performing Crops & Revenue</h3>
+                            <span style="font-size:12px; color:var(--text-muted);">Ranked by total sales</span>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="pro-data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Produce Item</th>
+                                        <th>Category</th>
+                                        <th>Price</th>
+                                        <th>Units Sold</th>
+                                        <th>Gross Revenue</th>
+                                        <th>In Stock</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reports-top-products-tbody">
+                                    <tr><td colspan="8" style="text-align:center; padding:20px; color:var(--text-muted);">Loading report data...</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -2431,116 +2778,63 @@
                 <!-- PAGE: PROFILE / SETTINGS -->
                 <div id="page-profile" class="page-content">
                     <div class="welcome-header">
-                        <h2 style="font-family:var(--font-serif); font-size:24px; color:var(--text-dark);">Farm Profile
-                            & Settings</h2>
-                        <p style="font-size:13px; color:var(--text-muted);">Manage your farm details, contact
-                            information, and public biography.</p>
+                        <h2 style="font-family:var(--font-serif); font-size:26px; color:var(--text-dark); margin-bottom:4px;">Farm Profile & Settings</h2>
+                        <p style="font-size:13.5px; color:var(--text-muted);">Manage your farm details, contact information, regional certification, and public biography.</p>
                     </div>
 
                     <div class="form-card">
                         <form id="profile-form" onsubmit="event.preventDefault(); farmer.updateProfile();">
                             <div class="form-grid">
                                 <div class="form-group">
-                                    <label for="profile-name">Full Name</label>
+                                    <label for="profile-name">Farmer Full Name *</label>
                                     <input type="text" id="profile-name" class="form-control" required>
                                 </div>
 
                                 <div class="form-group">
                                     <label for="profile-email">Email Address</label>
-                                    <input type="email" id="profile-email" class="form-control" readonly
-                                        style="background:var(--cream);">
+                                    <input type="email" id="profile-email" class="form-control" readonly style="background:var(--cream);">
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="profile-phone">Phone Number</label>
-                                    <input type="text" id="profile-phone" class="form-control">
+                                    <label for="profile-phone">Contact Phone</label>
+                                    <input type="text" id="profile-phone" class="form-control" placeholder="+91 98765 43210">
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="profile-farm-name">Farm Name</label>
-                                    <input type="text" id="profile-farm-name" class="form-control">
+                                    <label for="profile-farm-name">Farm Name / Trademark</label>
+                                    <input type="text" id="profile-farm-name" class="form-control" placeholder="e.g. Green Valley Organic Farms">
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="profile-farm-location">Farm Location / Region</label>
-                                    <input type="text" id="profile-farm-location" class="form-control">
+                                    <label for="profile-farm-location">Farm Region / Location</label>
+                                    <input type="text" id="profile-farm-location" class="form-control" placeholder="e.g. Pune, Maharashtra">
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="profile-address">Address</label>
-                                    <input type="text" id="profile-address" class="form-control">
+                                    <label for="profile-address">Dispatch Address</label>
+                                    <input type="text" id="profile-address" class="form-control" placeholder="Full pickup address for delivery agents">
                                 </div>
 
                                 <div class="form-group full">
-                                    <label for="profile-bio">Farm Story / Biography</label>
-                                    <textarea id="profile-bio" class="form-control" rows="3"
-                                        placeholder="Tell customers about your farm's history, sustainable practices, and produce quality..."></textarea>
+                                    <label for="profile-bio">Farm Story / Customer Biography</label>
+                                    <textarea id="profile-bio" class="form-control" rows="3" placeholder="Tell customers about your farm's history, sustainable harvesting methods, and produce quality..."></textarea>
                                 </div>
 
                                 <div class="form-group full">
-                                    <label>Profile Image</label>
+                                    <label>Farmer / Farm Logo Image</label>
                                     <div class="upload-area" id="profile-upload-area">
                                         <i class="fas fa-user-circle upload-icon"></i>
-                                        <p style="font-size:13px; font-weight:600; color:var(--text-dark);">Upload
-                                            Profile Picture</p>
+                                        <p style="font-size:13px; font-weight:600; color:var(--text-dark);">Upload Profile Picture</p>
                                         <input type="file" id="profile-image" accept="image/*" style="display:none;">
                                     </div>
-                                    <div id="profile-preview"></div>
+                                    <div id="profile-preview" style="margin-top:10px;"></div>
                                 </div>
                             </div>
 
                             <div style="display:flex; justify-content:flex-end; margin-top:20px;">
-                                <button type="submit" class="btn-add-product">Update Profile</button>
+                                <button type="submit" class="btn-add-product">Save Profile Changes</button>
                             </div>
                         </form>
-                    </div>
-                </div>
-
-                <!-- Placeholder pages for full menu shell -->
-                <div id="page-categories" class="page-content">
-                    <div class="welcome-header">
-                        <h2 style="font-family:var(--font-serif); font-size:24px; color:var(--text-dark);">Category
-                            Management</h2>
-                        <p style="font-size:13px; color:var(--text-muted);">Organize products into natural produce
-                            categories.</p>
-                    </div>
-                    <div class="form-card" style="text-align:center; padding:50px;">
-                        <i class="fas fa-tags"
-                            style="font-size:40px; color:var(--green-primary); margin-bottom:12px;"></i>
-                        <h3 style="font-family:var(--font-serif);">Category Settings</h3>
-                        <p style="color:var(--text-muted); margin-top:6px;">Vegetables, Fruits, Leafy Greens, and
-                            Organic categories active.</p>
-                    </div>
-                </div>
-
-                <div id="page-reviews" class="page-content">
-                    <div class="welcome-header">
-                        <h2 style="font-family:var(--font-serif); font-size:24px; color:var(--text-dark);">Customer
-                            Reviews</h2>
-                        <p style="font-size:13px; color:var(--text-muted);">Read feedback from verified farm customers.
-                        </p>
-                    </div>
-                    <div class="form-card" style="text-align:center; padding:50px;">
-                        <i class="fas fa-star" style="font-size:40px; color:var(--orange); margin-bottom:12px;"></i>
-                        <h3 style="font-family:var(--font-serif);">Customer Feedback</h3>
-                        <p style="color:var(--text-muted); margin-top:6px;">Average Rating: 4.9 ★ (98% Satisfaction
-                            Rate)</p>
-                    </div>
-                </div>
-
-                <div id="page-reports" class="page-content">
-                    <div class="welcome-header">
-                        <h2 style="font-family:var(--font-serif); font-size:24px; color:var(--text-dark);">Financial &
-                            Farm Reports</h2>
-                        <p style="font-size:13px; color:var(--text-muted);">Download monthly sales statements and crop
-                            yield analytics.</p>
-                    </div>
-                    <div class="form-card" style="text-align:center; padding:50px;">
-                        <i class="fas fa-chart-line"
-                            style="font-size:40px; color:var(--green-primary); margin-bottom:12px;"></i>
-                        <h3 style="font-family:var(--font-serif);">Monthly Reports Ready</h3>
-                        <p style="color:var(--text-muted); margin-top:6px;">Sales and order analytics integrated in
-                            Sales Overview.</p>
                     </div>
                 </div>
 
@@ -2552,13 +2846,12 @@
     <!-- Toast Container -->
     <div id="toast-container" role="alert" aria-live="polite"></div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="js/toast.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/farmer.js"></script>
+    <!-- Scripts (Local ultra-fast 0ms bundle) -->
+    <script src="js/vendor/chart.umd.min.js"></script>
+    <script src="js/toast.js?v=2.0.3"></script>
+    <script src="js/api.js?v=2.0.3"></script>
+    <script src="js/auth.js?v=2.0.3"></script>
+    <script src="js/farmer.js?v=2.0.3"></script>
 
     <script>
         // Sidebar Toggle Helper
@@ -2578,23 +2871,6 @@
                 return;
             }
             farmer.init();
-
-            // Backdrop click to close product modal
-            const prodModal = document.getElementById('product-modal');
-            if (prodModal) {
-                prodModal.addEventListener('click', function(e) {
-                    if (e.target === prodModal) {
-                        farmer.closeProductModal();
-                    }
-                });
-            }
-
-            // ESC key to close modal
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    farmer.closeProductModal();
-                }
-            });
         });
     </script>
 </body>

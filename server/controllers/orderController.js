@@ -174,18 +174,27 @@ const getCustomerOrders = async (req, res) => {
             [customerId]
         );
 
-        // Get items for each order
-        for (const order of orders) {
-            const [items] = await pool.query(
+        if (orders.length > 0) {
+            const orderIds = orders.map(o => o.id);
+            const [allItems] = await pool.query(
                 `SELECT oi.*, p.name as product_name, p.image_url,
                         u.name as farmer_name
                  FROM order_items oi
                  JOIN products p ON oi.product_id = p.id
                  JOIN users u ON oi.farmer_id = u.id
-                 WHERE oi.order_id = ?`,
-                [order.id]
+                 WHERE oi.order_id IN (?)`,
+                [orderIds]
             );
-            order.items = items;
+
+            const itemsByOrder = {};
+            allItems.forEach(item => {
+                if (!itemsByOrder[item.order_id]) itemsByOrder[item.order_id] = [];
+                itemsByOrder[item.order_id].push(item);
+            });
+
+            orders.forEach(order => {
+                order.items = itemsByOrder[order.id] || [];
+            });
         }
 
         res.json({
@@ -220,16 +229,25 @@ const getFarmerOrders = async (req, res) => {
             [farmerId]
         );
 
-        // Get items for each order
-        for (const order of orders) {
-            const [items] = await pool.query(
+        if (orders.length > 0) {
+            const orderIds = orders.map(o => o.id);
+            const [allItems] = await pool.query(
                 `SELECT oi.*, p.name as product_name, p.image_url
                  FROM order_items oi
                  JOIN products p ON oi.product_id = p.id
-                 WHERE oi.order_id = ? AND oi.farmer_id = ?`,
-                [order.id, farmerId]
+                 WHERE oi.order_id IN (?) AND oi.farmer_id = ?`,
+                [orderIds, farmerId]
             );
-            order.items = items;
+
+            const itemsByOrder = {};
+            allItems.forEach(item => {
+                if (!itemsByOrder[item.order_id]) itemsByOrder[item.order_id] = [];
+                itemsByOrder[item.order_id].push(item);
+            });
+
+            orders.forEach(order => {
+                order.items = itemsByOrder[order.id] || [];
+            });
         }
 
         res.json({
@@ -360,6 +378,20 @@ const updateOrderStatus = async (req, res) => {
 
         const order = orders[0];
 
+        // If order is newly cancelled, restore product stock
+        if (status === 'cancelled' && order.status !== 'cancelled') {
+            const [orderItems] = await pool.query(
+                'SELECT product_id, quantity FROM order_items WHERE order_id = ?',
+                [orderId]
+            );
+            for (const item of orderItems) {
+                await pool.query(
+                    'UPDATE products SET quantity = quantity + ? WHERE id = ?',
+                    [item.quantity, item.product_id]
+                );
+            }
+        }
+
         // Update order status (and mark paid if delivered)
         if (status === 'delivered') {
             await pool.query(
@@ -489,120 +521,148 @@ const getOrderHistory = async (req, res) => {
 const getFarmerStats = async (req, res) => {
     try {
         const farmerId = req.userId;
+        const timeframe = (req.query.timeframe || 'all').toLowerCase();
 
-        // Total orders
-        const [totalOrders] = await pool.query(
-            `SELECT COUNT(DISTINCT o.id) as count 
-             FROM orders o
-             JOIN order_items oi ON o.id = oi.order_id
-             WHERE oi.farmer_id = ?`,
-            [farmerId]
-        );
+        let dateCondition = '';
+        if (timeframe === 'today') {
+            dateCondition = 'AND DATE(o.created_at) = CURDATE()';
+        } else if (timeframe === '1_month' || timeframe === '1month') {
+            dateCondition = 'AND o.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)';
+        } else if (timeframe === '3_months' || timeframe === '3months') {
+            dateCondition = 'AND o.created_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)';
+        } else if (timeframe === '6_months' || timeframe === '6months') {
+            dateCondition = 'AND o.created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)';
+        } else if (timeframe === '1_year' || timeframe === '1year') {
+            dateCondition = 'AND o.created_at >= DATE_SUB(NOW(), INTERVAL 1 YEAR)';
+        }
 
-        // Orders by status
-        const [ordersByStatus] = await pool.query(
-            `SELECT o.status, COUNT(DISTINCT o.id) as count 
-             FROM orders o
-             JOIN order_items oi ON o.id = oi.order_id
-             WHERE oi.farmer_id = ?
-             GROUP BY o.status`,
-            [farmerId]
-        );
-
-        // Total revenue
-        const [revenue] = await pool.query(
-            `SELECT COALESCE(SUM(oi.total), 0) as total 
-             FROM order_items oi
-             JOIN orders o ON oi.order_id = o.id
-             WHERE oi.farmer_id = ? AND o.status != 'cancelled'`,
-            [farmerId]
-        );
-
-        // Total products
-        const [products] = await pool.query(
-            'SELECT COUNT(*) as count FROM products WHERE farmer_id = ?',
-            [farmerId]
-        );
-
-        // Recent orders
-        const [recentOrders] = await pool.query(
-            `SELECT o.id, o.order_number, o.total_amount, o.status, o.created_at,
-                    u.name as customer_name,
-                    (SELECT GROUP_CONCAT(CONCAT(p.name, ' (', oi2.quantity, ')') SEPARATOR ', ')
-                     FROM order_items oi2 
-                     JOIN products p ON oi2.product_id = p.id 
-                     WHERE oi2.order_id = o.id AND oi2.farmer_id = ?) as items_description
-             FROM orders o
-             JOIN order_items oi ON o.id = oi.order_id
-             JOIN users u ON o.customer_id = u.id
-             WHERE oi.farmer_id = ?
-             GROUP BY o.id
-             ORDER BY o.created_at DESC
-             LIMIT 5`,
-            [farmerId, farmerId]
-        );
-
-        // Top selling products
-        const [topProducts] = await pool.query(
-            `SELECT p.id, p.name, p.image_url, p.price, p.unit,
-                    COALESCE(SUM(oi.quantity), 0) as total_sold,
-                    COALESCE(SUM(oi.total), 0) as total_revenue
-             FROM products p
-             LEFT JOIN order_items oi ON p.id = oi.product_id
-             LEFT JOIN orders o ON oi.order_id = o.id AND o.status != 'cancelled'
-             WHERE p.farmer_id = ?
-             GROUP BY p.id
-             ORDER BY total_sold DESC, total_revenue DESC
-             LIMIT 4`,
-            [farmerId]
-        );
-
-        // Real-time sales overview by date (for revenue/orders chart)
-        const [salesByDate] = await pool.query(
-            `SELECT DATE(o.created_at) as order_date,
-                    COUNT(DISTINCT o.id) as orders_count,
-                    COALESCE(SUM(oi.total), 0) as revenue
-             FROM orders o
-             JOIN order_items oi ON o.id = oi.order_id
-             WHERE oi.farmer_id = ? AND o.status != 'cancelled'
-             GROUP BY DATE(o.created_at)
-             ORDER BY DATE(o.created_at) ASC
-             LIMIT 14`,
-            [farmerId]
-        );
-
-        // Today's orders count
-        const [todayOrders] = await pool.query(
-            `SELECT COUNT(DISTINCT o.id) as count
-             FROM orders o
-             JOIN order_items oi ON o.id = oi.order_id
-             WHERE oi.farmer_id = ? AND DATE(o.created_at) = CURDATE()`,
-            [farmerId]
-        );
-
-        // Distinct customer count
-        const [customerCount] = await pool.query(
-            `SELECT COUNT(DISTINCT o.customer_id) as count
-             FROM orders o
-             JOIN order_items oi ON o.id = oi.order_id
-             WHERE oi.farmer_id = ?`,
-            [farmerId]
-        );
-
-        // Reviews count
-        const [reviewsCount] = await pool.query(
-            `SELECT COUNT(*) as count 
-             FROM reviews r
-             JOIN products p ON r.product_id = p.id
-             WHERE p.farmer_id = ?`,
-            [farmerId]
-        );
+        // Run independent stats queries in parallel with Promise.all
+        const [
+            [totalOrders],
+            [ordersByStatus],
+            [revenue],
+            [products],
+            [recentOrders],
+            [topProducts],
+            [salesByDate],
+            [todayOrders],
+            [customerCount],
+            [reviewsCount]
+        ] = await Promise.all([
+            pool.query(
+                `SELECT COUNT(DISTINCT o.id) as count 
+                 FROM orders o
+                 JOIN order_items oi ON o.id = oi.order_id
+                 WHERE oi.farmer_id = ? ${dateCondition}`,
+                [farmerId]
+            ),
+            pool.query(
+                `SELECT o.status, COUNT(DISTINCT o.id) as count 
+                 FROM orders o
+                 JOIN order_items oi ON o.id = oi.order_id
+                 WHERE oi.farmer_id = ? ${dateCondition}
+                 GROUP BY o.status`,
+                [farmerId]
+            ),
+            pool.query(
+                `SELECT COALESCE(SUM(oi.total), 0) as total 
+                 FROM order_items oi
+                 JOIN orders o ON oi.order_id = o.id
+                 WHERE oi.farmer_id = ? AND o.status != 'cancelled' ${dateCondition}`,
+                [farmerId]
+            ),
+            pool.query(
+                'SELECT COUNT(*) as count FROM products WHERE farmer_id = ?',
+                [farmerId]
+            ),
+            pool.query(
+                `SELECT o.id, o.order_number, o.total_amount, o.status, o.created_at,
+                        u.name as customer_name,
+                        (SELECT GROUP_CONCAT(CONCAT(p.name, ' (', oi2.quantity, ')') SEPARATOR ', ')
+                         FROM order_items oi2 
+                         JOIN products p ON oi2.product_id = p.id 
+                         WHERE oi2.order_id = o.id AND oi2.farmer_id = ?) as items_description
+                 FROM orders o
+                 JOIN order_items oi ON o.id = oi.order_id
+                 JOIN users u ON o.customer_id = u.id
+                 WHERE oi.farmer_id = ? ${dateCondition}
+                 GROUP BY o.id
+                 ORDER BY o.created_at DESC
+                 LIMIT 5`,
+                [farmerId, farmerId]
+            ),
+            pool.query(
+                `SELECT p.id, p.name, p.image_url, p.price, p.unit,
+                        COALESCE(SUM(oi.quantity), 0) as total_sold,
+                        COALESCE(SUM(oi.total), 0) as total_revenue
+                 FROM products p
+                 LEFT JOIN order_items oi ON p.id = oi.product_id
+                 LEFT JOIN orders o ON oi.order_id = o.id AND o.status != 'cancelled' ${dateCondition}
+                 WHERE p.farmer_id = ?
+                 GROUP BY p.id
+                 ORDER BY total_sold DESC, total_revenue DESC
+                 LIMIT 5`,
+                [farmerId]
+            ),
+            pool.query(
+                timeframe === 'today'
+                    ? `SELECT DATE_FORMAT(o.created_at, '%h %p') as order_date,
+                              COUNT(DISTINCT o.id) as orders_count,
+                              COALESCE(SUM(oi.total), 0) as revenue
+                       FROM orders o
+                       JOIN order_items oi ON o.id = oi.order_id
+                       WHERE oi.farmer_id = ? AND o.status != 'cancelled' AND DATE(o.created_at) = CURDATE()
+                       GROUP BY DATE_FORMAT(o.created_at, '%h %p'), HOUR(o.created_at)
+                       ORDER BY HOUR(o.created_at) ASC`
+                    : (timeframe === '1_year' || timeframe === '1year'
+                        ? `SELECT DATE_FORMAT(o.created_at, '%b %Y') as order_date,
+                                  COUNT(DISTINCT o.id) as orders_count,
+                                  COALESCE(SUM(oi.total), 0) as revenue
+                           FROM orders o
+                           JOIN order_items oi ON o.id = oi.order_id
+                           WHERE oi.farmer_id = ? AND o.status != 'cancelled' ${dateCondition}
+                           GROUP BY DATE_FORMAT(o.created_at, '%b %Y'), DATE_FORMAT(o.created_at, '%Y-%m')
+                           ORDER BY DATE_FORMAT(o.created_at, '%Y-%m') ASC`
+                        : `SELECT DATE(o.created_at) as order_date,
+                                  COUNT(DISTINCT o.id) as orders_count,
+                                  COALESCE(SUM(oi.total), 0) as revenue
+                           FROM orders o
+                           JOIN order_items oi ON o.id = oi.order_id
+                           WHERE oi.farmer_id = ? AND o.status != 'cancelled' ${dateCondition}
+                           GROUP BY DATE(o.created_at)
+                           ORDER BY DATE(o.created_at) ASC
+                           LIMIT 31`),
+                [farmerId]
+            ),
+            pool.query(
+                `SELECT COUNT(DISTINCT o.id) as count
+                 FROM orders o
+                 JOIN order_items oi ON o.id = oi.order_id
+                 WHERE oi.farmer_id = ? AND DATE(o.created_at) = CURDATE()`,
+                [farmerId]
+            ),
+            pool.query(
+                `SELECT COUNT(DISTINCT o.customer_id) as count
+                 FROM orders o
+                 JOIN order_items oi ON o.id = oi.order_id
+                 WHERE oi.farmer_id = ? ${dateCondition}`,
+                [farmerId]
+            ),
+            pool.query(
+                `SELECT COUNT(*) as count 
+                 FROM reviews r
+                 JOIN products p ON r.product_id = p.id
+                 WHERE p.farmer_id = ?`,
+                [farmerId]
+            )
+        ]);
 
         // Calculate pending orders
         const pendingOrders = ordersByStatus.find(s => s.status === 'pending')?.count || 0;
 
         res.json({
             success: true,
+            timeframe,
             stats: {
                 totalOrders: totalOrders[0].count || 0,
                 pendingOrders: pendingOrders || 0,

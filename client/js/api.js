@@ -74,6 +74,16 @@ const API = {
         return this.handleResponse(response);
     },
 
+    // PATCH request
+    async patch(endpoint, body = {}) {
+        const response = await fetch(`${this.baseURL}${endpoint}`, {
+            method: 'PATCH',
+            headers: this.getHeaders(),
+            body: JSON.stringify(body)
+        });
+        return this.handleResponse(response);
+    },
+
     // DELETE request
     async delete(endpoint) {
         const response = await fetch(`${this.baseURL}${endpoint}`, {
@@ -115,18 +125,20 @@ async putFormData(endpoint, formData) {
     // ============================================
     // PRODUCTS API
     // ============================================
-products: {
-    getAll: (params = {}) => {
-        const query = new URLSearchParams(params).toString();
-        return API.get(`/products${query ? '?' + query : ''}`);
+    products: {
+        getAll: (params = {}) => {
+            const query = new URLSearchParams(params).toString();
+            return API.get(`/products${query ? '?' + query : ''}`);
+        },
+        getById: (id) => API.get(`/products/${id}`),
+        create: (data) => API.postFormData('/products', data),
+        update: (id, data) => API.putFormData(`/products/${id}`, data),
+        delete: (id) => API.delete(`/products/${id}`),
+        toggleAvailability: (id) => API.patch(`/products/${id}/toggle-availability`),
+        quickStock: (id, payload) => API.patch(`/products/${id}/quick-stock`, payload),
+        getFarmerProducts: () => API.get('/products/farmer/products'),
+        getCategories: () => API.get('/products/categories')
     },
-    getById: (id) => API.get(`/products/${id}`),
-    create: (data) => API.postFormData('/products', data),
-    update: (id, data) => API.putFormData(`/products/${id}`, data),
-    delete: (id) => API.delete(`/products/${id}`),
-    getFarmerProducts: () => API.get('/products/farmer/products'),
-    getCategories: () => API.get('/products/categories')
-},
 
     // ============================================
     // ORDERS API
@@ -135,7 +147,10 @@ products: {
         create: (data) => API.post('/orders', data),
         getCustomerOrders: () => API.get('/orders/customer/orders'),
         getFarmerOrders: () => API.get('/orders/farmer/orders'),
-        getFarmerStats: () => API.get('/orders/farmer/stats'),
+        getFarmerStats: (params = {}) => {
+            const tf = typeof params === 'string' ? params : (params && params.timeframe ? params.timeframe : '');
+            return API.get(`/orders/farmer/stats${tf ? '?timeframe=' + encodeURIComponent(tf) : ''}`);
+        },
         getById: (id) => API.get(`/orders/${id}`),
         getHistory: (id) => API.get(`/orders/${id}/history`),
         updateStatus: (id, status, note) => API.put(`/orders/${id}/status`, { status, note })
@@ -151,7 +166,8 @@ products: {
         addToWishlist: (productId) => API.post('/users/wishlist', { product_id: productId }),
         removeFromWishlist: (productId) => API.delete(`/users/wishlist/${productId}`),
         addReview: (data) => API.post('/users/reviews', data),
-        getProductReviews: (productId) => API.get(`/users/reviews/${productId}`)
+        getProductReviews: (productId) => API.get(`/users/reviews/${productId}`),
+        getFarmerReviews: () => API.get('/users/farmer/reviews')
     },
 
     // ============================================

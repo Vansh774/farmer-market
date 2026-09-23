@@ -7,7 +7,8 @@ const {
     addToWishlist,
     removeFromWishlist,
     addReview,
-    getProductReviews
+    getProductReviews,
+    getFarmerReviews
 } = require('../controllers/userController');
 const { authenticate } = require('../middleware/auth');
 const upload = require('../middleware/upload');
@@ -24,5 +25,6 @@ router.delete('/wishlist/:productId', authenticate, removeFromWishlist);
 // Review routes
 router.post('/reviews', authenticate, addReview);
 router.get('/reviews/:productId', getProductReviews);
+router.get('/farmer/reviews', authenticate, getFarmerReviews);
 
 module.exports = router;

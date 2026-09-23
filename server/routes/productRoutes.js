@@ -7,7 +7,9 @@ const {
     updateProduct, 
     deleteProduct,
     getFarmerProducts,
-    getCategories
+    getCategories,
+    toggleProductAvailability,
+    quickAdjustStock
 } = require('../controllers/productController');
 const { authenticate, authorizeFarmer } = require('../middleware/auth');
 const upload = require('../middleware/upload');
@@ -62,6 +64,8 @@ router.put('/:id',
 );
 
 router.delete('/:id', authenticate, authorizeFarmer, deleteProduct);
+router.patch('/:id/toggle-availability', authenticate, authorizeFarmer, toggleProductAvailability);
+router.patch('/:id/quick-stock', authenticate, authorizeFarmer, quickAdjustStock);
 router.get('/farmer/products', authenticate, authorizeFarmer, getFarmerProducts);
 
 module.exports = router;

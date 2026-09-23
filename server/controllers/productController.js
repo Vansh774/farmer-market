@@ -310,7 +310,7 @@ const getFarmerProducts = async (req, res) => {
 
         const [products] = await pool.query(
             `SELECT p.*, 
-                    (SELECT COUNT(*) FROM order_items WHERE product_id = p.id) as total_sold
+                    COALESCE((SELECT SUM(quantity) FROM order_items WHERE product_id = p.id), 0) as total_sold
              FROM products p
              WHERE p.farmer_id = ?
              ORDER BY p.created_at DESC`,
@@ -355,6 +355,91 @@ const getCategories = async (req, res) => {
     }
 };
 
+// Toggle product availability
+const toggleProductAvailability = async (req, res) => {
+    try {
+        const farmerId = req.userId;
+        const productId = req.params.id;
+
+        const [products] = await pool.query(
+            'SELECT id, is_available, name FROM products WHERE id = ? AND farmer_id = ?',
+            [productId, farmerId]
+        );
+
+        if (products.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Product not found or unauthorized'
+            });
+        }
+
+        const newStatus = !products[0].is_available;
+        await pool.query(
+            'UPDATE products SET is_available = ? WHERE id = ?',
+            [newStatus, productId]
+        );
+
+        res.json({
+            success: true,
+            is_available: newStatus,
+            message: `Product ${products[0].name} marked as ${newStatus ? 'Available' : 'Unavailable'}`
+        });
+    } catch (error) {
+        console.error('Toggle availability error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error toggling availability',
+            error: error.message
+        });
+    }
+};
+
+// Quick adjust product stock
+const quickAdjustStock = async (req, res) => {
+    try {
+        const farmerId = req.userId;
+        const productId = req.params.id;
+        const { delta, quantity } = req.body;
+
+        const [products] = await pool.query(
+            'SELECT id, quantity, name FROM products WHERE id = ? AND farmer_id = ?',
+            [productId, farmerId]
+        );
+
+        if (products.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Product not found or unauthorized'
+            });
+        }
+
+        let newQty = products[0].quantity;
+        if (typeof quantity === 'number') {
+            newQty = Math.max(0, quantity);
+        } else if (typeof delta === 'number') {
+            newQty = Math.max(0, newQty + delta);
+        }
+
+        await pool.query(
+            'UPDATE products SET quantity = ? WHERE id = ?',
+            [newQty, productId]
+        );
+
+        res.json({
+            success: true,
+            quantity: newQty,
+            message: `Updated stock for ${products[0].name} to ${newQty}`
+        });
+    } catch (error) {
+        console.error('Quick adjust stock error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error adjusting stock',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     getProducts,
     getProduct,
@@ -362,5 +447,7 @@ module.exports = {
     updateProduct,
     deleteProduct,
     getFarmerProducts,
-    getCategories
+    getCategories,
+    toggleProductAvailability,
+    quickAdjustStock
 };

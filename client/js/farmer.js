@@ -43,18 +43,40 @@ const farmer = {
                 day: 'numeric'
             });
         }
-
         // Setup navigation
         this.setupNavigation();
 
         // Setup upload drag and drop areas
         this.setupUploadAreas();
 
-        // Load dashboard data
-        this.loadDashboard();
+        // Instant cache-first dashboard restore (0ms paint)
+        this.restoreCachedDashboard();
 
         // Show default page
         this.showPage('dashboard');
+
+        // Warm up and prefetch all tab data in background immediately
+        setTimeout(() => this.preloadAllData(), 40);
+    },
+
+    restoreCachedDashboard() {
+        try {
+            const cached = sessionStorage.getItem('ff_farmer_stats');
+            if (cached) {
+                const data = JSON.parse(cached);
+                this.applyStatsToDOM(data);
+            }
+        } catch(e) {}
+    },
+
+    async preloadAllData() {
+        try {
+            await Promise.all([
+                this.fetchProductsInBackground(),
+                this.fetchOrdersInBackground(),
+                this.fetchReviewsInBackground()
+            ]);
+        } catch(e) {}
     },
 
     setupNavigation() {
@@ -74,6 +96,11 @@ const farmer = {
     showPage(page) {
         this.currentPage = page;
         
+        // Update active class on sidebar navigation
+        document.querySelectorAll('.sidebar-nav a').forEach(a => {
+            a.classList.toggle('active', a.dataset.page === page);
+        });
+
         // Hide all page contents
         document.querySelectorAll('.page-content').forEach(el => {
             el.classList.remove('active');
@@ -97,6 +124,15 @@ const farmer = {
                 break;
             case 'orders':
                 this.loadOrders();
+                break;
+            case 'categories':
+                this.loadCategories();
+                break;
+            case 'reviews':
+                this.loadReviews();
+                break;
+            case 'reports':
+                this.loadReports();
                 break;
             case 'profile':
                 this.loadProfile();
@@ -159,53 +195,60 @@ const farmer = {
             const res = await API.orders.getFarmerStats();
             if (res && res.success && res.stats) {
                 const data = res.stats;
-                const revEl = document.getElementById('stat-revenue');
-                if (revEl) revEl.textContent = `₹${parseFloat(data.totalRevenue ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-                const prodEl = document.getElementById('stat-products');
-                if (prodEl) prodEl.textContent = (data.totalProducts ?? 0).toLocaleString();
-
-                const pendingEl = document.getElementById('stat-pending');
-                if (pendingEl) pendingEl.textContent = (data.pendingOrders ?? 0).toLocaleString();
-
-                const ordEl = document.getElementById('stat-orders');
-                if (ordEl) ordEl.textContent = (data.totalOrders ?? 0).toLocaleString();
-
-                const badge = document.getElementById('pending-badge');
-                if (badge) {
-                    badge.textContent = data.pendingOrders ?? 0;
-                    badge.style.display = (data.pendingOrders > 0) ? 'inline' : 'none';
-                }
-
-                // Render Charts with real-time data
-                this.renderRevenueChart(data.salesByDate);
-                this.renderDonutChart(data.ordersByStatus, data.totalOrders);
-
-                // Render Top Products with real-time data
-                this.renderTopProducts(data.topProducts);
-
-                // Render Recent Orders with real-time data
-                this.renderRecentOrders(data.recentOrders);
-
-                // Render Activity Overview with real-time data
-                this.renderActivity(data);
+                sessionStorage.setItem('ff_farmer_stats', JSON.stringify(data));
+                this.applyStatsToDOM(data);
                 return;
             }
         } catch (error) {
             console.error('Failed to load farmer stats:', error);
         }
 
-        // Clean fallback
-        this.renderRevenueChart([]);
-        this.renderDonutChart({}, 0);
-        this.renderTopProducts([]);
-        this.renderRecentOrders([]);
-        this.renderActivity({});
+        if (!sessionStorage.getItem('ff_farmer_stats')) {
+            this.renderRevenueChart([]);
+            this.renderDonutChart({}, 0);
+            this.renderTopProducts([]);
+            this.renderRecentOrders([]);
+            this.renderActivity({});
+        }
+    },
+
+    applyStatsToDOM(data) {
+        if (!data) return;
+        const revEl = document.getElementById('stat-revenue');
+        if (revEl) revEl.textContent = `₹${parseFloat(data.totalRevenue ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        const prodEl = document.getElementById('stat-products');
+        if (prodEl) prodEl.textContent = (data.totalProducts ?? 0).toLocaleString();
+
+        const pendingEl = document.getElementById('stat-pending');
+        if (pendingEl) pendingEl.textContent = (data.pendingOrders ?? 0).toLocaleString();
+
+        const ordEl = document.getElementById('stat-orders');
+        if (ordEl) ordEl.textContent = (data.totalOrders ?? 0).toLocaleString();
+
+        const badge = document.getElementById('pending-badge');
+        if (badge) {
+            badge.textContent = data.pendingOrders ?? 0;
+            badge.style.display = (data.pendingOrders > 0) ? 'inline' : 'none';
+        }
+
+        // Render Charts with real-time data
+        this.renderRevenueChart(data.salesByDate);
+        this.renderDonutChart(data.ordersByStatus, data.totalOrders);
+
+        // Render Top Products with real-time data
+        this.renderTopProducts(data.topProducts);
+
+        // Render Recent Orders with real-time data
+        this.renderRecentOrders(data.recentOrders);
+
+        // Render Activity Overview with real-time data
+        this.renderActivity(data);
     },
 
     renderRevenueChart(salesByDate = []) {
         const ctx = document.getElementById('revenue-chart');
-        if (!ctx) return;
+        if (!ctx || typeof Chart === 'undefined') return;
 
         if (this.revenueChartInstance) {
             this.revenueChartInstance.destroy();
@@ -321,7 +364,7 @@ const farmer = {
 
     renderDonutChart(statusCounts = {}, totalOrders = 0) {
         const ctx = document.getElementById('user-distribution-chart');
-        if (!ctx) return;
+        if (!ctx || typeof Chart === 'undefined') return;
 
         if (this.donutChartInstance) {
             this.donutChartInstance.destroy();
@@ -509,99 +552,155 @@ const farmer = {
     },
 
     // ============================================
-    // PRODUCTS MANAGEMENT (Executive Catalog Suite)
+    // PRODUCE IMAGE SMART FALLBACK
     // ============================================
-    products: [],
-    productViewMode: localStorage.getItem('freshfield_farmer_prod_view') || 'grid',
+    getProduceFallback(name) {
+        const lower = (name || '').toLowerCase();
+        if (lower.includes('tomato')) return 'assets/images/tomatoes.png';
+        if (lower.includes('carrot')) return 'assets/images/carrots.png';
+        if (lower.includes('spinach')) return 'assets/images/spinach.png';
+        if (lower.includes('strawberr')) return 'assets/images/strawberries.png';
+        if (lower.includes('pepper') || lower.includes('capsicum')) return 'assets/images/bell-peppers.png';
+        if (lower.includes('potato')) return 'assets/images/potatoes.png';
+        return 'assets/images/hero-produce.png';
+    },
 
-    async loadProducts(silent = false) {
-        const container = document.getElementById('farmer-products');
-        const refreshIcon = document.getElementById('refresh-products-icon');
-        if (refreshIcon) refreshIcon.classList.add('fa-spin');
+    // ============================================
+    // PRODUCTS MANAGEMENT (PROFESSIONAL SUITE)
+    // ============================================
+    allProducts: [],
+    productViewMode: 'grid',
 
-        if (!silent && container && (!this.products || this.products.length === 0)) {
-            container.innerHTML = '<div style="text-align:center; padding:50px 20px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin" style="font-size:24px; color:var(--green-primary); margin-bottom:12px;"></i><p>Loading farm catalog...</p></div>';
+    updateProductsKPIs() {
+        const total = this.allProducts.length;
+        const avail = this.allProducts.filter(p => p.is_available !== false && (p.quantity || 0) > 0).length;
+        const low = this.allProducts.filter(p => (p.quantity || 0) > 0 && (p.quantity || 0) < 25).length;
+        const out = this.allProducts.filter(p => (p.quantity || 0) === 0).length;
+        const val = this.allProducts.reduce((sum, p) => sum + (parseFloat(p.price || 0) * (parseInt(p.quantity || 0))), 0);
+
+        const elTotal = document.getElementById('prod-kpi-total');
+        if (elTotal) elTotal.textContent = total;
+        const elAvail = document.getElementById('prod-kpi-avail');
+        if (elAvail) elAvail.textContent = avail;
+        const elLow = document.getElementById('prod-kpi-low');
+        if (elLow) elLow.textContent = low;
+        const elOut = document.getElementById('prod-kpi-out');
+        if (elOut) elOut.textContent = out;
+        const elVal = document.getElementById('prod-kpi-value');
+        if (elVal) elVal.textContent = '₹' + val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const catFilter = document.getElementById('prod-filter-category');
+        if (catFilter) {
+            const currentVal = catFilter.value;
+            const categories = [...new Set(this.allProducts.map(p => p.category).filter(Boolean))];
+            catFilter.innerHTML = '<option value="all">All Categories</option>' + 
+                categories.map(c => `<option value="${c}" ${c === currentVal ? 'selected' : ''}>${c}</option>`).join('');
         }
+    },
 
+    async fetchProductsInBackground() {
+        if (this._fetchingProducts) return;
+        this._fetchingProducts = true;
         try {
             const data = await API.products.getFarmerProducts();
             if (data && data.success && Array.isArray(data.products)) {
-                this.products = data.products;
-                this.updateProductKPIs();
-                this.syncViewToggleButtons();
-                this.renderProducts();
-            } else {
-                this.products = [];
-                this.updateProductKPIs();
-                this.syncViewToggleButtons();
-                this.renderProducts();
+                this.allProducts = data.products;
+                sessionStorage.setItem('ff_farmer_prods', JSON.stringify(this.allProducts));
+                this.updateProductsKPIs();
+                if (this.currentPage === 'products') {
+                    this.filterProducts();
+                } else if (this.currentPage === 'categories') {
+                    this.renderCategoriesGrid();
+                }
             }
-        } catch (error) {
-            console.error('Error loading products:', error);
-            if (container) {
-                container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 30px;">Failed to load products. Please click Refresh to try again.</p>';
-            }
+        } catch(e) {
         } finally {
-            if (refreshIcon) {
-                setTimeout(() => refreshIcon.classList.remove('fa-spin'), 400);
-            }
+            this._fetchingProducts = false;
         }
     },
 
-    syncViewToggleButtons() {
-        const btnGrid = document.getElementById('btn-view-grid');
-        const btnTable = document.getElementById('btn-view-table');
-        if (btnGrid) btnGrid.classList.toggle('active', this.productViewMode === 'grid');
-        if (btnTable) btnTable.classList.toggle('active', this.productViewMode === 'table');
+    async loadProducts(forceRefresh = false) {
+        const container = document.getElementById('farmer-products');
+        if (!container) return;
+
+        // Instant Render from memory (0ms delay)
+        if (this.allProducts && this.allProducts.length > 0 && !forceRefresh) {
+            this.updateProductsKPIs();
+            this.filterProducts();
+            this.fetchProductsInBackground();
+            return;
+        }
+
+        // Instant Render from sessionStorage (0ms delay)
+        const cached = sessionStorage.getItem('ff_farmer_prods');
+        if (cached && !forceRefresh) {
+            try {
+                this.allProducts = JSON.parse(cached);
+                this.updateProductsKPIs();
+                this.filterProducts();
+                this.fetchProductsInBackground();
+                return;
+            } catch(e) {}
+        }
+
+        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 30px;"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Loading catalog...</p>';
+        await this.fetchProductsInBackground();
     },
 
-    updateProductKPIs() {
-        const total = this.products.length;
-        const healthy = this.products.filter(p => (parseInt(p.quantity) || 0) > 20).length;
-        const low = this.products.filter(p => (parseInt(p.quantity) || 0) <= 20).length;
-        const totalVal = this.products.reduce((sum, p) => {
-            const pr = parseFloat(p.price) || 0;
-            const q = parseInt(p.quantity) || 0;
-            return sum + (pr * q);
-        }, 0);
-
-        const badgeEl = document.getElementById('products-count-badge');
-        if (badgeEl) badgeEl.textContent = `${total} ${total === 1 ? 'Product Listed' : 'Products Listed'}`;
-
-        const totalEl = document.getElementById('prod-stat-total');
-        if (totalEl) totalEl.textContent = total;
-
-        const healthyEl = document.getElementById('prod-stat-healthy');
-        if (healthyEl) healthyEl.textContent = healthy;
-
-        const lowEl = document.getElementById('prod-stat-low');
-        if (lowEl) lowEl.textContent = low;
-
-        const valEl = document.getElementById('prod-stat-value');
-        if (valEl) valEl.textContent = `₹${totalVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    },
-
-    setProductViewMode(mode) {
+    setProductView(mode) {
         this.productViewMode = mode;
-        try {
-            localStorage.setItem('freshfield_farmer_prod_view', mode);
-        } catch (e) {}
-
         const btnGrid = document.getElementById('btn-view-grid');
         const btnTable = document.getElementById('btn-view-table');
         if (btnGrid) btnGrid.classList.toggle('active', mode === 'grid');
         if (btnTable) btnTable.classList.toggle('active', mode === 'table');
-
         this.renderProducts();
     },
 
     filterProducts() {
-        this.renderProducts();
-    },
+        const searchInput = document.getElementById('prod-search-input');
+        const q = (searchInput ? searchInput.value : '').toLowerCase().trim();
+        const catFilter = document.getElementById('prod-filter-category');
+        const cat = catFilter ? catFilter.value : 'all';
+        const stockFilter = document.getElementById('prod-filter-stock');
+        const stock = stockFilter ? stockFilter.value : 'all';
+        const sortFilter = document.getElementById('prod-sort');
+        const sort = sortFilter ? sortFilter.value : 'newest';
 
-    clearProductSearch() {
-        const input = document.getElementById('product-search');
-        if (input) input.value = '';
+        let list = [...this.allProducts];
+
+        if (q) {
+            list = list.filter(p => (p.name || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
+        }
+
+        if (cat !== 'all') {
+            list = list.filter(p => p.category === cat);
+        }
+
+        if (stock === 'in_stock') {
+            list = list.filter(p => (p.quantity || 0) > 0);
+        } else if (stock === 'low_stock') {
+            list = list.filter(p => (p.quantity || 0) > 0 && (p.quantity || 0) < 25);
+        } else if (stock === 'out_of_stock') {
+            list = list.filter(p => (p.quantity || 0) === 0);
+        } else if (stock === 'available') {
+            list = list.filter(p => p.is_available !== false);
+        } else if (stock === 'unavailable') {
+            list = list.filter(p => p.is_available === false);
+        }
+
+        if (sort === 'price_asc') {
+            list.sort((a, b) => parseFloat(a.price || 0) - parseFloat(b.price || 0));
+        } else if (sort === 'price_desc') {
+            list.sort((a, b) => parseFloat(b.price || 0) - parseFloat(a.price || 0));
+        } else if (sort === 'stock_desc') {
+            list.sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
+        } else if (sort === 'stock_asc') {
+            list.sort((a, b) => (a.quantity || 0) - (b.quantity || 0));
+        } else if (sort === 'name_asc') {
+            list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        }
+
+        this.filteredProducts = list;
         this.renderProducts();
     },
 
@@ -609,310 +708,242 @@ const farmer = {
         const container = document.getElementById('farmer-products');
         if (!container) return;
 
-        const searchInput = document.getElementById('product-search');
-        const searchVal = searchInput ? searchInput.value.trim().toLowerCase() : '';
+        const list = this.filteredProducts || [];
 
-        const clearBtn = document.getElementById('product-search-clear');
-        if (clearBtn) clearBtn.style.display = searchVal ? 'block' : 'none';
-
-        const catSelect = document.getElementById('product-category-filter');
-        const catVal = catSelect ? catSelect.value : 'all';
-
-        const stockSelect = document.getElementById('product-stock-filter');
-        const stockVal = stockSelect ? stockSelect.value : 'all';
-
-        const sortSelect = document.getElementById('product-sort-filter');
-        const sortVal = sortSelect ? sortSelect.value : 'newest';
-
-        // Filter
-        let list = [...this.products].filter(p => {
-            if (searchVal) {
-                const name = (p.name || '').toLowerCase();
-                const desc = (p.description || '').toLowerCase();
-                const cat = (p.category || '').toLowerCase();
-                if (!name.includes(searchVal) && !desc.includes(searchVal) && !cat.includes(searchVal)) {
-                    return false;
-                }
-            }
-
-            if (catVal !== 'all') {
-                if (p.category !== catVal) return false;
-            }
-
-            const q = parseInt(p.quantity) || 0;
-            const isAvail = p.is_available !== false && p.is_available !== 0 && p.is_available !== 'false';
-
-            if (stockVal === 'healthy' && q <= 20) return false;
-            if (stockVal === 'low' && (q <= 0 || q > 20)) return false;
-            if (stockVal === 'out' && q > 0) return false;
-            if (stockVal === 'available' && !isAvail) return false;
-            if (stockVal === 'hidden' && isAvail) return false;
-
-            return true;
-        });
-
-        // Sort
-        list.sort((a, b) => {
-            const priceA = parseFloat(a.price) || 0;
-            const priceB = parseFloat(b.price) || 0;
-            const stockA = parseInt(a.quantity) || 0;
-            const stockB = parseInt(b.quantity) || 0;
-
-            if (sortVal === 'price-asc') return priceA - priceB;
-            if (sortVal === 'price-desc') return priceB - priceA;
-            if (sortVal === 'stock-desc') return stockB - stockA;
-            if (sortVal === 'stock-low') return stockA - stockB;
-            if (sortVal === 'name-asc') return (a.name || '').localeCompare(b.name || '');
-            return (b.id || 0) - (a.id || 0);
-        });
-
-        // Empty state
         if (list.length === 0) {
-            if (this.products.length === 0) {
-                container.innerHTML = `
-                    <div style="text-align:center; padding:60px 20px; background:var(--white); border-radius:18px; border:1px dashed var(--beige-mid);">
-                        <div style="width:72px; height:72px; background:var(--green-pale); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; color:var(--green-primary); font-size:30px;">
-                            <i class="fas fa-seedling"></i>
-                        </div>
-                        <h3 style="font-family:var(--font-serif); font-size:22px; color:var(--text-dark); margin-bottom:8px;">No Produce Listed Yet</h3>
-                        <p style="font-size:13.5px; color:var(--text-muted); max-width:440px; margin:0 auto 20px;">
-                            Start listing your harvest produce so local customers can discover, purchase, and support your farm.
-                        </p>
-                        <button class="btn-add-product" onclick="farmer.showAddProductForm()">
-                            <i class="fas fa-plus-circle"></i> Add First Farm Produce
-                        </button>
-                    </div>`;
-            } else {
-                container.innerHTML = `
-                    <div style="text-align:center; padding:50px 20px; background:var(--white); border-radius:18px; border:1px solid var(--beige);">
-                        <div style="width:58px; height:58px; background:var(--cream); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; color:var(--text-muted); font-size:24px;">
-                            <i class="fas fa-filter"></i>
-                        </div>
-                        <h3 style="font-family:var(--font-serif); font-size:19px; color:var(--text-dark); margin-bottom:6px;">No matching produce found</h3>
-                        <p style="font-size:13px; color:var(--text-muted); max-width:400px; margin:0 auto 18px;">
-                            Try clearing your search query or selecting a different category/stock filter.
-                        </p>
-                        <button class="btn-refresh-catalog" onclick="farmer.clearProductFilters()">
-                            <i class="fas fa-redo"></i> Reset All Filters
-                        </button>
-                    </div>`;
-            }
+            container.innerHTML = `
+                <div style="text-align:center; padding:60px 20px; background:var(--white); border-radius:18px; border:1px dashed var(--beige-mid);">
+                    <div style="width:64px; height:64px; background:var(--green-pale); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; color:var(--green-primary); font-size:26px;">
+                        <i class="fas fa-leaf"></i>
+                    </div>
+                    <h3 style="font-family:var(--font-serif); font-size:20px; color:var(--text-dark); margin-bottom:6px;">No crops found</h3>
+                    <p style="font-size:13px; color:var(--text-muted); max-width:420px; margin:0 auto 18px;">
+                        Try resetting your search query or filters, or list a fresh produce harvest.
+                    </p>
+                    <button class="btn-add-product" onclick="farmer.showAddProductForm()">
+                        <i class="fas fa-plus"></i> Add New Produce
+                    </button>
+                </div>`;
             return;
         }
 
-        // Render Grid View
-        if (this.productViewMode === 'grid') {
+        if (this.productViewMode === 'table') {
             container.innerHTML = `
-                <div class="farmer-products-grid">
-                    ${list.map(p => this.createProductCardHTML(p)).join('')}
+                <div style="background:var(--white); border-radius:18px; border:1px solid var(--beige-mid); overflow:hidden; box-shadow:var(--shadow-sm);">
+                    <div style="overflow-x:auto;">
+                        <table class="pro-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Produce Crop</th>
+                                    <th>Category</th>
+                                    <th>Price / Unit</th>
+                                    <th>Inventory Stock</th>
+                                    <th>Quick Adjust</th>
+                                    <th>Store Status</th>
+                                    <th style="text-align:right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${list.map(p => {
+                                    let imgUrl = p.image_url || '';
+                                    if (imgUrl && !imgUrl.startsWith('http') && !imgUrl.startsWith('assets/')) {
+                                        imgUrl = `http://localhost:5000${imgUrl}`;
+                                    }
+                                    const fallback = this.getProduceFallback(p.name);
+                                    const isAvail = p.is_available !== false;
+                                    const qty = p.quantity || 0;
+                                    const isLow = qty > 0 && qty < 25;
+                                    const isOut = qty === 0;
+
+                                    return `
+                                    <tr>
+                                        <td>
+                                            <div style="display:flex; align-items:center; gap:12px;">
+                                                <img src="${imgUrl || fallback}" alt="${p.name}" style="width:44px; height:44px; border-radius:10px; object-fit:cover; background:var(--cream);" onerror="this.onerror=null;this.src='${fallback}';">
+                                                <div>
+                                                    <div style="font-weight:600; color:var(--text-dark); font-size:14px;">${p.name}</div>
+                                                    <div style="font-size:11.5px; color:var(--text-muted);">${p.total_sold || 0} sold to date</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td><span style="font-size:11.5px; font-weight:600; color:var(--orange); background:var(--orange-pale); padding:3px 8px; border-radius:var(--radius-pill);">${p.category || 'General'}</span></td>
+                                        <td><strong style="color:var(--green-primary); font-size:14px;">₹${parseFloat(p.price || 0).toFixed(2)}</strong> <span style="font-size:11.5px; color:var(--text-muted);">/ ${p.unit || 'kg'}</span></td>
+                                        <td>
+                                            <span class="status-badge-pill ${isOut ? 'cancelled' : (isLow ? 'processing' : 'delivered')}">
+                                                ${isOut ? '0 (Out of Stock)' : (isLow ? `${qty} in stock (Low)` : `${qty} in stock`)}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="stock-stepper-btns">
+                                                <button class="stock-stepper-btn" onclick="farmer.quickAdjustStock(${p.id}, -5)" title="Subtract 5">-5</button>
+                                                <button class="stock-stepper-btn" onclick="farmer.quickAdjustStock(${p.id}, -1)" title="Subtract 1">-1</button>
+                                                <span class="stock-stepper-val">${qty}</span>
+                                                <button class="stock-stepper-btn" onclick="farmer.quickAdjustStock(${p.id}, 1)" title="Add 1">+1</button>
+                                                <button class="stock-stepper-btn" onclick="farmer.quickAdjustStock(${p.id}, 5)" title="Add 5">+5</button>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <button onclick="farmer.toggleProductAvailability(${p.id})" style="border:none; cursor:pointer; padding:5px 12px; border-radius:var(--radius-pill); font-size:11px; font-weight:700; transition:all 0.2s; background:${isAvail ? '#D6E4B8' : '#FEE2E2'}; color:${isAvail ? '#355C24' : '#DC2626'};">
+                                                <i class="fas ${isAvail ? 'fa-eye' : 'fa-eye-slash'}" style="margin-right:4px;"></i>${isAvail ? 'Active' : 'Hidden'}
+                                            </button>
+                                        </td>
+                                        <td style="text-align:right;">
+                                            <div style="display:inline-flex; gap:6px;">
+                                                <button class="btn-icon-sm" onclick="farmer.editProduct(${p.id})" title="Edit Produce"><i class="fas fa-pen"></i></button>
+                                                <button class="btn-icon-sm danger" onclick="farmer.deleteProduct(${p.id})" title="Delete Produce"><i class="fas fa-trash-alt"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>`;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>`;
         } else {
-            // Render Table View
+            // Cards View
             container.innerHTML = `
-                <div class="farmer-products-table-wrap">
-                    <table class="farmer-products-table">
-                        <thead>
-                            <tr>
-                                <th>Produce Item</th>
-                                <th>Category</th>
-                                <th>Price</th>
-                                <th>Stock Inventory</th>
-                                <th>Total Sold</th>
-                                <th>Visibility</th>
-                                <th style="text-align:right;">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${list.map(p => this.createProductTableRowHTML(p)).join('')}
-                        </tbody>
-                    </table>
+                <div class="farmer-products-grid">
+                    ${list.map(p => {
+                        let imgUrl = p.image_url || '';
+                        if (imgUrl && !imgUrl.startsWith('http') && !imgUrl.startsWith('assets/')) {
+                            imgUrl = `http://localhost:5000${imgUrl}`;
+                        }
+                        const fallback = this.getProduceFallback(p.name);
+                        const isAvail = p.is_available !== false;
+                        const qty = p.quantity || 0;
+                        const maxCap = Math.max(100, qty);
+                        const pct = Math.min(100, Math.round((qty / maxCap) * 100));
+                        const isLow = qty > 0 && qty < 25;
+                        const isOut = qty === 0;
+                        const barClass = isOut ? 'out' : (isLow ? 'low' : '');
+
+                        return `
+                        <div class="product-card-pro">
+                            <div class="product-card-pro-top">
+                                <img src="${imgUrl || fallback}" alt="${p.name}" loading="lazy" onerror="this.onerror=null;this.src='${fallback}';">
+                                <div class="product-card-pro-badge status-badge-pill ${isAvail ? 'delivered' : 'cancelled'}">
+                                    <i class="fas ${isAvail ? 'fa-check' : 'fa-eye-slash'}"></i> ${isAvail ? 'Available' : 'Hidden'}
+                                </div>
+                            </div>
+                            <div class="product-card-pro-body">
+                                <div class="product-card-pro-cat">${p.category || 'General'}</div>
+                                <h4 class="product-card-pro-title">${p.name}</h4>
+                                <div class="product-card-pro-price">
+                                    ₹${parseFloat(p.price || 0).toFixed(2)} <span>/ ${p.unit || 'kg'}</span>
+                                </div>
+
+                                <div class="stock-progress-wrap">
+                                    <div class="stock-progress-header">
+                                        <span>Stock Level</span>
+                                        <strong>${qty} ${p.unit || 'units'}</strong>
+                                    </div>
+                                    <div class="stock-progress-track">
+                                        <div class="stock-progress-bar ${barClass}" style="width: ${pct}%;"></div>
+                                    </div>
+                                </div>
+
+                                <div class="product-card-pro-actions">
+                                    <div class="stock-stepper-btns">
+                                        <button class="stock-stepper-btn" onclick="farmer.quickAdjustStock(${p.id}, -1)" title="Minus 1">-</button>
+                                        <span class="stock-stepper-val">${qty}</span>
+                                        <button class="stock-stepper-btn" onclick="farmer.quickAdjustStock(${p.id}, 1)" title="Plus 1">+</button>
+                                    </div>
+
+                                    <button onclick="farmer.toggleProductAvailability(${p.id})" style="border:none; cursor:pointer; padding:6px 12px; border-radius:var(--radius-pill); font-size:11px; font-weight:700; transition:all 0.2s; background:${isAvail ? '#D6E4B8' : '#FEE2E2'}; color:${isAvail ? '#355C24' : '#DC2626'};">
+                                        <i class="fas ${isAvail ? 'fa-toggle-on' : 'fa-toggle-off'}"></i> ${isAvail ? 'Live' : 'Hidden'}
+                                    </button>
+
+                                    <div style="display:flex; gap:4px;">
+                                        <button class="btn-icon-sm" onclick="farmer.editProduct(${p.id})" title="Edit"><i class="fas fa-pen"></i></button>
+                                        <button class="btn-icon-sm danger" onclick="farmer.deleteProduct(${p.id})" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('')}
                 </div>`;
         }
     },
 
-    clearProductFilters() {
-        const searchInput = document.getElementById('product-search');
-        if (searchInput) searchInput.value = '';
-        const catSelect = document.getElementById('product-category-filter');
-        if (catSelect) catSelect.value = 'all';
-        const stockSelect = document.getElementById('product-stock-filter');
-        if (stockSelect) stockSelect.value = 'all';
-        const sortSelect = document.getElementById('product-sort-filter');
-        if (sortSelect) sortSelect.value = 'newest';
-        this.renderProducts();
-    },
+    async toggleProductAvailability(id) {
+        try {
+            let res;
+            if (typeof API !== 'undefined' && API.products && typeof API.products.toggleAvailability === 'function') {
+                res = await API.products.toggleAvailability(id);
+            } else if (typeof API !== 'undefined' && typeof API.patch === 'function') {
+                res = await API.patch(`/products/${id}/toggle-availability`);
+            } else {
+                const token = (typeof auth !== 'undefined' && auth.getToken) ? auth.getToken() : localStorage.getItem('token');
+                const response = await fetch(`http://localhost:5000/api/products/${id}/toggle-availability`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    }
+                });
+                res = await response.json();
+            }
 
-    createProductCardHTML(p) {
-        let imgUrl = p.image_url || '';
-        if (imgUrl && !imgUrl.startsWith('http') && !imgUrl.startsWith('assets/')) {
-            imgUrl = `http://localhost:5000${imgUrl}`;
-        }
-        const fallback = 'assets/images/tomatoes.png';
-        const price = parseFloat(p.price).toFixed(2);
-        const unit = p.unit || 'kg';
-        const quantity = parseInt(p.quantity) || 0;
-        const totalSold = parseInt(p.total_sold) || 0;
-        const isAvail = p.is_available !== false && p.is_available !== 0 && p.is_available !== 'false';
-
-        // Stock calculation
-        let stockClass = 'healthy';
-        let stockLabel = `In Stock (${quantity} ${unit})`;
-        let fillWidth = Math.min(100, Math.max(10, Math.round((quantity / 100) * 100)));
-
-        if (quantity <= 0) {
-            stockClass = 'out';
-            stockLabel = 'Out of Stock (0)';
-            fillWidth = 100;
-        } else if (quantity <= 20) {
-            stockClass = 'low';
-            stockLabel = `Low Stock (${quantity} ${unit} left)`;
-            fillWidth = Math.round((quantity / 20) * 100);
-        }
-
-        const safeDesc = p.description ? p.description.replace(/"/g, '&quot;') : 'Freshly harvested natural produce directly from our farm soil.';
-
-        return `
-            <div class="farmer-prod-card" data-product-id="${p.id}">
-                <div class="farmer-prod-img-wrap">
-                    <img src="${imgUrl || fallback}" alt="${p.name}" class="farmer-prod-img" loading="lazy" onerror="this.onerror=null;this.src='${fallback}';">
-                    <span class="farmer-prod-cat-pill">${p.category || 'Produce'}</span>
-                    <button type="button" class="farmer-prod-status-pill ${isAvail ? 'available' : 'unavailable'}" 
-                        onclick="farmer.toggleProductAvailability(${p.id})" 
-                        title="Click to toggle visibility in store">
-                        <i class="fas ${isAvail ? 'fa-check-circle' : 'fa-eye-slash'}"></i> ${isAvail ? 'Available' : 'Hidden'}
-                    </button>
-                </div>
-
-                <div class="farmer-prod-body">
-                    <h4 class="farmer-prod-title">${p.name}</h4>
-                    <p class="farmer-prod-desc">${safeDesc}</p>
-
-                    <div class="farmer-prod-pricing-row">
-                        <div class="farmer-prod-price">
-                            ₹${price} <span class="farmer-prod-unit">/ ${unit}</span>
-                        </div>
-                        <span class="farmer-prod-sold">
-                            <i class="fas fa-shopping-bag" style="margin-right:4px;"></i>${totalSold} sold
-                        </span>
-                    </div>
-
-                    <div class="farmer-prod-stock-wrap">
-                        <div class="farmer-prod-stock-meta">
-                            <span class="stock-level-${stockClass}">
-                                <i class="fas ${stockClass === 'healthy' ? 'fa-boxes' : stockClass === 'low' ? 'fa-exclamation-triangle' : 'fa-times-circle'}"></i> ${stockLabel}
-                            </span>
-                            <span style="color:var(--text-muted); font-size:11px;">Max 100+</span>
-                        </div>
-                        <div class="farmer-prod-stock-bar">
-                            <div class="farmer-prod-stock-fill ${stockClass}" style="width: ${fillWidth}%;"></div>
-                        </div>
-                    </div>
-
-                    <div class="farmer-prod-actions">
-                        <button type="button" class="btn-prod-edit" onclick="farmer.editProduct(${p.id})">
-                            <i class="fas fa-pen"></i> Edit Produce
-                        </button>
-                        <button type="button" class="btn-prod-delete" onclick="farmer.deleteProduct(${p.id})" title="Delete Produce Listing">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>`;
-    },
-
-    createProductTableRowHTML(p) {
-        let imgUrl = p.image_url || '';
-        if (imgUrl && !imgUrl.startsWith('http') && !imgUrl.startsWith('assets/')) {
-            imgUrl = `http://localhost:5000${imgUrl}`;
-        }
-        const fallback = 'assets/images/tomatoes.png';
-        const price = parseFloat(p.price).toFixed(2);
-        const unit = p.unit || 'kg';
-        const quantity = parseInt(p.quantity) || 0;
-        const totalSold = parseInt(p.total_sold) || 0;
-        const isAvail = p.is_available !== false && p.is_available !== 0 && p.is_available !== 'false';
-
-        let stockBadgeClass = 'status-delivered';
-        let stockText = `${quantity} in stock`;
-        if (quantity <= 0) {
-            stockBadgeClass = 'status-cancelled';
-            stockText = 'Out of Stock';
-        } else if (quantity <= 20) {
-            stockBadgeClass = 'status-processing';
-            stockText = `Low (${quantity} left)`;
-        }
-
-        return `
-            <tr>
-                <td>
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <img src="${imgUrl || fallback}" alt="${p.name}" style="width:52px; height:52px; border-radius:10px; object-fit:cover; border:1px solid var(--beige-mid);" onerror="this.onerror=null;this.src='${fallback}';">
-                        <div>
-                            <div style="font-family:var(--font-serif); font-size:15px; font-weight:700; color:var(--text-dark);">${p.name}</div>
-                            <div style="font-size:11.5px; color:var(--text-muted); max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.description || 'Fresh natural produce'}</div>
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    <span style="background:var(--cream); padding:4px 10px; border-radius:var(--radius-pill); font-size:11.5px; font-weight:600; color:var(--text-dark); border:1px solid var(--beige-mid);">
-                        ${p.category || 'Produce'}
-                    </span>
-                </td>
-                <td>
-                    <div style="font-family:var(--font-serif); font-size:16px; font-weight:700; color:var(--green-primary);">₹${price}</div>
-                    <div style="font-size:11px; color:var(--text-muted);">per ${unit}</div>
-                </td>
-                <td>
-                    <span class="status-badge-pill ${stockBadgeClass}">
-                        ${stockText}
-                    </span>
-                </td>
-                <td>
-                    <span style="font-weight:600; font-size:13px; color:var(--text-dark);">${totalSold}</span> <span style="font-size:11px; color:var(--text-muted);">orders</span>
-                </td>
-                <td>
-                    <button type="button" class="farmer-prod-status-pill ${isAvail ? 'available' : 'unavailable'}" 
-                        style="position:static;" 
-                        onclick="farmer.toggleProductAvailability(${p.id})" 
-                        title="Click to toggle visibility">
-                        <i class="fas ${isAvail ? 'fa-check-circle' : 'fa-eye-slash'}"></i> ${isAvail ? 'Available' : 'Hidden'}
-                    </button>
-                </td>
-                <td style="text-align:right;">
-                    <div style="display:inline-flex; gap:6px;">
-                        <button type="button" class="btn-icon-sm" onclick="farmer.editProduct(${p.id})" title="Edit Produce">
-                            <i class="fas fa-pen"></i>
-                        </button>
-                        <button type="button" class="btn-icon-sm danger" onclick="farmer.deleteProduct(${p.id})" title="Delete Produce">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>`;
-    },
-
-    openProductModal() {
-        const modal = document.getElementById('product-modal');
-        if (modal) {
-            modal.classList.add('open');
-            document.body.style.overflow = 'hidden';
+            if (res && res.success) {
+                const p = this.allProducts.find(item => item.id == id);
+                if (p) p.is_available = res.is_available;
+                this.filterProducts();
+                if (typeof toast !== 'undefined') toast.success(res.message || 'Availability updated');
+            } else {
+                if (typeof toast !== 'undefined') toast.error(res?.message || 'Failed to toggle availability');
+            }
+        } catch (e) {
+            console.error('Toggle error:', e);
+            if (typeof toast !== 'undefined') toast.error(e.message || 'Failed to toggle availability');
         }
     },
 
-    closeProductModal() {
-        const modal = document.getElementById('product-modal');
-        if (modal) {
-            modal.classList.remove('open');
-            document.body.style.overflow = '';
+    async quickAdjustStock(id, delta) {
+        try {
+            let res;
+            if (typeof API !== 'undefined' && API.products && typeof API.products.quickStock === 'function') {
+                res = await API.products.quickStock(id, { delta });
+            } else if (typeof API !== 'undefined' && typeof API.patch === 'function') {
+                res = await API.patch(`/products/${id}/quick-stock`, { delta });
+            } else {
+                const token = (typeof auth !== 'undefined' && auth.getToken) ? auth.getToken() : localStorage.getItem('token');
+                const response = await fetch(`http://localhost:5000/api/products/${id}/quick-stock`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    },
+                    body: JSON.stringify({ delta })
+                });
+                res = await response.json();
+            }
+
+            if (res && res.success) {
+                const p = this.allProducts.find(item => item.id == id);
+                if (p) p.quantity = res.quantity;
+                this.filterProducts();
+                if (typeof toast !== 'undefined') toast.info(`Stock updated: ${res.quantity}`);
+            } else {
+                if (typeof toast !== 'undefined') toast.error(res?.message || 'Failed to adjust stock');
+            }
+        } catch (e) {
+            console.error('Stock adjust error:', e);
+            if (typeof toast !== 'undefined') toast.error(e.message || 'Failed to adjust stock');
         }
-        this.resetProductForm();
     },
 
     showAddProductForm() {
-        this.resetProductForm();
         const title = document.getElementById('product-form-title');
-        if (title) title.textContent = 'Add New Farm Produce';
-        this.openProductModal();
+        if (title) title.textContent = 'Add New Produce';
+        const fields = document.getElementById('product-form-fields');
+        if (fields) fields.reset();
+        const idField = document.getElementById('product-id');
+        if (idField) idField.value = '';
+        const prev = document.getElementById('upload-preview');
+        if (prev) prev.innerHTML = '';
+        this.editingProductId = null;
+        const formEl = document.getElementById('product-form');
+        if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
     },
 
     async editProduct(id) {
@@ -921,8 +952,8 @@ const farmer = {
             if (data && data.success && data.product) {
                 const p = data.product;
                 const title = document.getElementById('product-form-title');
-                if (title) title.textContent = `Edit Produce: ${p.name}`;
-
+                if (title) title.textContent = 'Edit Produce';
+                
                 document.getElementById('product-id').value = p.id;
                 document.getElementById('product-name').value = p.name || '';
                 document.getElementById('product-category').value = p.category || '';
@@ -931,12 +962,6 @@ const farmer = {
                 document.getElementById('product-quantity').value = p.quantity || '';
                 document.getElementById('product-unit').value = p.unit || 'kg';
 
-                const availSelect = document.getElementById('product-available');
-                if (availSelect) {
-                    const isAvail = p.is_available !== false && p.is_available !== 0 && p.is_available !== 'false';
-                    availSelect.value = isAvail ? 'true' : 'false';
-                }
-
                 const preview = document.getElementById('upload-preview');
                 if (preview) {
                     preview.innerHTML = '';
@@ -944,58 +969,20 @@ const farmer = {
                         const img = document.createElement('img');
                         img.src = p.image_url.startsWith('http') ? p.image_url : `http://localhost:5000${p.image_url}`;
                         img.className = 'upload-preview-img';
-                        img.style.maxHeight = '140px';
-                        img.style.borderRadius = '12px';
-                        img.style.border = '1px solid var(--beige-mid)';
-                        img.style.marginTop = '12px';
+                        img.style.cssText = 'max-width:120px; border-radius:10px; margin-top:8px;';
                         preview.appendChild(img);
                     }
                 }
 
-                this.editingProductId = p.id;
-                this.openProductModal();
+                const formEl = document.getElementById('product-form');
+                if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
             }
         } catch (error) {
-            console.error('Error fetching product for edit:', error);
             if (typeof toast !== 'undefined') toast.error('Failed to load product details');
         }
     },
 
-    async toggleProductAvailability(id) {
-        const prod = this.products.find(p => p.id === Number(id));
-        if (!prod) return;
-
-        const currentAvail = prod.is_available !== false && prod.is_available !== 0 && prod.is_available !== 'false';
-        const newAvail = !currentAvail;
-
-        // Optimistic UI update
-        prod.is_available = newAvail;
-        this.renderProducts();
-
-        try {
-            const formData = new FormData();
-            formData.append('is_available', newAvail);
-            const res = await API.products.update(id, formData);
-            if (res && res.success) {
-                if (typeof toast !== 'undefined') {
-                    toast.success(`${prod.name} is now ${newAvail ? 'Available in store' : 'Hidden from store'}`);
-                }
-            } else {
-                throw new Error(res.message || 'Update failed');
-            }
-        } catch (err) {
-            console.error('Error toggling availability:', err);
-            // Revert
-            prod.is_available = currentAvail;
-            this.renderProducts();
-            if (typeof toast !== 'undefined') toast.error('Failed to change produce visibility');
-        }
-    },
-
     async saveProduct() {
-        const saveBtn = document.getElementById('btn-save-product');
-        const origBtnText = saveBtn ? saveBtn.innerHTML : 'Save Produce Listing';
-
         try {
             const id = document.getElementById('product-id').value;
             const name = document.getElementById('product-name').value.trim();
@@ -1004,19 +991,12 @@ const farmer = {
             const price = document.getElementById('product-price').value;
             const quantity = document.getElementById('product-quantity').value;
             const unit = document.getElementById('product-unit').value;
-            const availSelect = document.getElementById('product-available');
-            const isAvail = availSelect ? availSelect.value === 'true' : true;
             const imageFile = document.getElementById('product-image').files[0];
 
-            if (!name) { if (typeof toast!=='undefined') toast.error('Please enter a produce name'); return; }
+            if (!name) { if (typeof toast!=='undefined') toast.error('Please enter a product name'); return; }
             if (!category) { if (typeof toast!=='undefined') toast.error('Please select a category'); return; }
             if (!price || parseFloat(price) <= 0) { if (typeof toast!=='undefined') toast.error('Please enter a valid price'); return; }
-            if (quantity === '' || parseInt(quantity) < 0) { if (typeof toast!=='undefined') toast.error('Please enter a valid stock quantity'); return; }
-
-            if (saveBtn) {
-                saveBtn.disabled = true;
-                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-            }
+            if (!quantity || parseInt(quantity) < 0) { if (typeof toast!=='undefined') toast.error('Please enter a valid quantity'); return; }
 
             const formData = new FormData();
             formData.append('name', name);
@@ -1025,158 +1005,1081 @@ const farmer = {
             formData.append('price', parseFloat(price));
             formData.append('quantity', parseInt(quantity));
             formData.append('unit', unit || 'kg');
-            formData.append('is_available', isAvail);
             if (imageFile) formData.append('image', imageFile);
 
             let result;
             if (id) {
                 result = await API.products.update(id, formData);
-                if (result && result.success && typeof toast!=='undefined') toast.success('Produce updated successfully! 🌿');
+                if (result && result.success && typeof toast!=='undefined') toast.success('Product updated successfully!');
             } else {
                 result = await API.products.create(formData);
-                if (result && result.success && typeof toast!=='undefined') toast.success('New produce listed successfully! 🌿');
+                if (result && result.success && typeof toast!=='undefined') toast.success('Produce listed successfully!');
             }
 
             if (result && result.success) {
-                this.closeProductModal();
-                await this.loadProducts(true);
+                this.resetProductForm();
+                await this.loadProducts();
             }
         } catch (error) {
             console.error('Save product error:', error);
             if (typeof toast!=='undefined') toast.error(error.message || 'Failed to save product');
-        } finally {
-            if (saveBtn) {
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = origBtnText;
-            }
         }
     },
 
     resetProductForm() {
         const fields = document.getElementById('product-form-fields');
         if (fields) fields.reset();
-        const idField = document.getElementById('product-id');
-        if (idField) idField.value = '';
+        document.getElementById('product-id').value = '';
         const prev = document.getElementById('upload-preview');
         if (prev) prev.innerHTML = '';
         const title = document.getElementById('product-form-title');
-        if (title) title.textContent = 'Add New Farm Produce';
+        if (title) title.textContent = 'Add New Produce';
         this.editingProductId = null;
     },
 
     async deleteProduct(id) {
-        const prod = this.products.find(p => p.id === Number(id));
-        const name = prod ? prod.name : 'this produce';
-
-        if (!confirm(`Are you sure you want to permanently remove "${name}" from your catalog?`)) return;
-
+        if (!confirm('Are you sure you want to delete this produce from your catalog?')) return;
         try {
             const result = await API.products.delete(id);
             if (result && result.success) {
                 if (typeof toast!=='undefined') toast.success('Produce deleted successfully');
-                await this.loadProducts(true);
+                this.loadProducts();
             }
         } catch (error) {
-            if (typeof toast!=='undefined') toast.error('Failed to delete produce');
+            if (typeof toast!=='undefined') toast.error('Failed to delete product');
         }
     },
 
     // ============================================
-    // ORDERS MANAGEMENT
+    // ORDERS MANAGEMENT (ATTRACTIVE & INTUITIVE)
     // ============================================
-    async loadOrders() {
+    allOrders: [],
+    orderStatusFilter: 'all',
+
+    updateOrdersKPIs() {
+        const total = this.allOrders.length;
+        const pending = this.allOrders.filter(o => o.status === 'pending').length;
+        const prep = this.allOrders.filter(o => ['confirmed', 'preparing', 'ready'].includes(o.status)).length;
+        const transit = this.allOrders.filter(o => ['out_for_delivery', 'on_the_way'].includes(o.status)).length;
+        const delivered = this.allOrders.filter(o => o.status === 'delivered').length;
+        const rev = this.allOrders.filter(o => o.status !== 'cancelled').reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
+
+        const elTot = document.getElementById('orders-kpi-total');
+        if (elTot) elTot.textContent = total;
+        const elPen = document.getElementById('orders-kpi-pending');
+        if (elPen) elPen.textContent = pending;
+        const elPrep = document.getElementById('orders-kpi-prep');
+        if (elPrep) elPrep.textContent = prep;
+        const elTran = document.getElementById('orders-kpi-transit');
+        if (elTran) elTran.textContent = transit;
+        const elDel = document.getElementById('orders-kpi-delivered');
+        if (elDel) elDel.textContent = delivered;
+        const elRev = document.getElementById('orders-kpi-rev');
+        if (elRev) elRev.textContent = '₹' + rev.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    },
+
+    async fetchOrdersInBackground() {
+        if (this._fetchingOrders) return;
+        this._fetchingOrders = true;
+        try {
+            const data = await API.orders.getFarmerOrders();
+            if (data && data.success && Array.isArray(data.orders)) {
+                this.allOrders = data.orders;
+                sessionStorage.setItem('ff_farmer_orders', JSON.stringify(this.allOrders));
+                this.updateOrdersKPIs();
+                if (this.currentPage === 'orders') {
+                    this.filterOrders();
+                } else if (this.currentPage === 'reports') {
+                    this.loadReports();
+                }
+            }
+        } catch(e) {
+        } finally {
+            this._fetchingOrders = false;
+        }
+    },
+
+    async loadOrders(forceRefresh = false) {
         const container = document.getElementById('farmer-orders');
         if (!container) return;
-        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Loading orders...</p>';
+
+        // Instant Render from memory (0ms delay)
+        if (this.allOrders && this.allOrders.length > 0 && !forceRefresh) {
+            this.updateOrdersKPIs();
+            this.filterOrders();
+            this.fetchOrdersInBackground();
+            return;
+        }
+
+        // Instant Render from sessionStorage (0ms delay)
+        const cached = sessionStorage.getItem('ff_farmer_orders');
+        if (cached && !forceRefresh) {
+            try {
+                this.allOrders = JSON.parse(cached);
+                this.updateOrdersKPIs();
+                this.filterOrders();
+                this.fetchOrdersInBackground();
+                return;
+            } catch(e) {}
+        }
+
+        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 30px;"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Loading orders...</p>';
+        await this.fetchOrdersInBackground();
+    },
+
+    setOrderFilter(status) {
+        this.orderStatusFilter = status;
+        document.querySelectorAll('#orders-status-tabs .view-switch-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.status === status);
+        });
+        this.filterOrders();
+    },
+
+    filterOrders() {
+        const searchInput = document.getElementById('orders-search-input');
+        const q = (searchInput ? searchInput.value : '').toLowerCase().trim();
+        const status = this.orderStatusFilter || 'all';
+
+        let list = [...this.allOrders];
+
+        if (status !== 'all') {
+            list = list.filter(o => o.status === status);
+        }
+
+        if (q) {
+            list = list.filter(o => 
+                (o.order_number || '').toLowerCase().includes(q) ||
+                (o.customer_name || '').toLowerCase().includes(q) ||
+                (o.shipping_address || '').toLowerCase().includes(q)
+            );
+        }
+
+        this.filteredOrders = list;
+        this.renderOrders();
+    },
+
+    copyOrderId(num) {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(num);
+            if (typeof toast !== 'undefined') toast.info(`Copied ${num}`);
+        }
+    },
+
+    renderOrders() {
+        const container = document.getElementById('farmer-orders');
+        if (!container) return;
+
+        const list = this.filteredOrders || [];
+
+        if (list.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding:60px 20px; background:var(--white); border-radius:18px; border:1px dashed var(--beige-mid);">
+                    <div style="width:64px; height:64px; background:var(--green-pale); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; color:var(--green-primary); font-size:26px;">
+                        <i class="fas fa-shopping-bag"></i>
+                    </div>
+                    <h3 style="font-family:var(--font-serif); font-size:20px; color:var(--text-dark); margin-bottom:6px;">No orders found</h3>
+                    <p style="font-size:13px; color:var(--text-muted); max-width:420px; margin:0 auto;">
+                        No customer orders match your selected filter criteria.
+                    </p>
+                </div>`;
+            return;
+        }
+
+        const stages = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered'];
+        const stageLabels = {
+            'pending': '1. Placed',
+            'confirmed': '2. Confirmed',
+            'preparing': '3. Preparing',
+            'ready': '4. Packed',
+            'out_for_delivery': '5. In Transit',
+            'delivered': '6. Delivered'
+        };
+
+        const nextStageMap = {
+            'pending': { next: 'confirmed', label: 'Confirm Order', icon: 'fa-check' },
+            'confirmed': { next: 'preparing', label: 'Start Harvesting/Packing', icon: 'fa-box-open' },
+            'preparing': { next: 'ready', label: 'Mark Ready for Dispatch', icon: 'fa-check-double' },
+            'ready': { next: 'out_for_delivery', label: 'Hand to Delivery Driver', icon: 'fa-motorcycle' },
+            'out_for_delivery': { next: 'on_the_way', label: 'Approaching Destination', icon: 'fa-route' },
+            'on_the_way': { next: 'delivered', label: 'Mark Delivered Fresh', icon: 'fa-house-circle-check' }
+        };
+
+        container.innerHTML = list.map(o => {
+            const nextAction = nextStageMap[o.status];
+            const isReady = o.status === 'ready';
+            const inTransit = ['out_for_delivery', 'on_the_way'].includes(o.status);
+            const isDelivered = o.status === 'delivered';
+            const dateStr = new Date(o.created_at || Date.now()).toLocaleDateString('en-IN', {
+                day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+            const orderNum = o.order_number || `#ORD-${o.id}`;
+            const total = parseFloat(o.total_amount || 0).toFixed(2);
+            const paymentStatus = (o.payment_status || 'pending').toUpperCase();
+            const items = o.items || [];
+
+            const currIdx = stages.indexOf(o.status);
+            const pct = currIdx >= 0 ? Math.min(100, Math.round((currIdx / (stages.length - 1)) * 100)) : 0;
+
+            return `
+            <div class="order-card-pro">
+                <div class="order-card-pro-head">
+                    <div>
+                        <div class="order-card-pro-id">
+                            ${orderNum}
+                            <button class="order-copy-btn" onclick="farmer.copyOrderId('${orderNum}')" title="Copy Order ID"><i class="fas fa-copy"></i> Copy</button>
+                        </div>
+                        <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                            Placed on ${dateStr}
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="status-badge-pill ${paymentStatus === 'PAID' ? 'delivered' : 'processing'}">
+                            <i class="fas ${paymentStatus === 'PAID' ? 'fa-check' : 'fa-clock'}"></i> Payment: ${paymentStatus}
+                        </span>
+                        <span class="status-badge-pill ${o.status || 'pending'}">
+                            ${(o.status || 'pending').replace(/_/g, ' ').toUpperCase()}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Stepper Progress Bar -->
+                <div class="order-stepper-pro">
+                    <div class="order-stepper-track">
+                        <div class="order-stepper-fill" style="width: ${pct}%;"></div>
+                    </div>
+                    ${stages.map((st, i) => {
+                        const isDone = currIdx > i;
+                        const isCurr = currIdx === i;
+                        const nodeClass = isDone ? 'completed' : (isCurr ? 'current' : '');
+                        return `
+                        <div class="order-step-node ${nodeClass}">
+                            <div class="order-step-circle">
+                                ${isDone ? '<i class="fas fa-check"></i>' : (i + 1)}
+                            </div>
+                            <span class="order-step-label">${stageLabels[st]}</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+
+                <!-- Middle Details Grid -->
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:18px; background:var(--cream); padding:16px; border-radius:14px; margin-bottom:16px;">
+                    <div>
+                        <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                            <i class="fas fa-user" style="margin-right:4px;"></i> Customer Details
+                        </div>
+                        <div style="font-weight:700; color:var(--text-dark); font-size:14px;">${o.customer_name || 'Customer'}</div>
+                        <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                            <a href="tel:${o.customer_phone || ''}" style="color:var(--green-primary); text-decoration:none;">
+                                <i class="fas fa-phone" style="margin-right:4px;"></i>${o.customer_phone || 'Contact provided on dispatch'}
+                            </a>
+                        </div>
+                        <div style="font-size:12px; color:var(--text-dark); margin-top:6px; line-height:1.4;">
+                            <i class="fas fa-location-dot" style="color:#DC2626; margin-right:4px;"></i>${o.shipping_address || 'Standard Address'}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+                            <i class="fas fa-basket-shopping" style="margin-right:4px;"></i> Produce Ordered (${items.length} items)
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:6px; max-height:120px; overflow-y:auto;">
+                            ${items.map(item => `
+                                <div style="display:flex; justify-content:space-between; font-size:12.5px; background:var(--white); padding:6px 10px; border-radius:8px; border:1px solid var(--beige);">
+                                    <span><strong>${item.product_name}</strong> × ${item.quantity}</span>
+                                    <span style="font-weight:600; color:var(--green-primary);">₹${parseFloat(item.total || item.price * item.quantity).toFixed(2)}</span>
+                                </div>
+                            `).join('') || `<div style="font-size:12px; color:var(--text-muted);">${o.item_count || 1} items ordered</div>`}
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:13px; font-weight:700; color:var(--text-dark);">
+                            <span>Total Bill:</span>
+                            <span style="color:var(--green-primary); font-size:15px;">₹${total}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Action Controls -->
+                <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:11.5px; font-weight:600; color:var(--text-muted);">Change Stage:</span>
+                        <select onchange="farmer.updateOrderStatus(${o.id}, this.value)" class="pro-filter-select" style="padding:6px 12px; font-size:12px;">
+                            <option value="pending" ${o.status === 'pending' ? 'selected' : ''}>1. Order Placed</option>
+                            <option value="confirmed" ${o.status === 'confirmed' ? 'selected' : ''}>2. Confirmed</option>
+                            <option value="preparing" ${o.status === 'preparing' ? 'selected' : ''}>3. Preparing</option>
+                            <option value="ready" ${o.status === 'ready' ? 'selected' : ''}>4. Ready for Dispatch</option>
+                            <option value="out_for_delivery" ${o.status === 'out_for_delivery' ? 'selected' : ''}>5. Out for Delivery</option>
+                            <option value="on_the_way" ${o.status === 'on_the_way' ? 'selected' : ''}>6. On the Way</option>
+                            <option value="delivered" ${o.status === 'delivered' ? 'selected' : ''}>7. Delivered</option>
+                            <option value="cancelled" ${o.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                        </select>
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        ${nextAction ? `
+                            <button onclick="farmer.updateOrderStatus(${o.id}, '${nextAction.next}')" class="btn-add-product" style="padding:8px 16px; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+                                <i class="fas ${nextAction.icon}"></i> ${nextAction.label}
+                            </button>
+                        ` : ''}
+
+                        ${isReady || inTransit ? `
+                            <button onclick="farmer.openAssignDeliveryModal(${o.id}, '${orderNum}')" class="btn-balance-details" style="background:#F28C28; color:#fff; border:none; padding:8px 14px; font-size:12px; cursor:pointer; border-radius:var(--radius-pill); display:inline-flex; align-items:center; gap:6px;">
+                                <i class="fas fa-motorcycle"></i> ${inTransit ? 'Reassign Driver' : 'Assign Delivery'}
+                            </button>
+                        ` : ''}
+
+                        ${inTransit || isDelivered ? `
+                            <button onclick="farmer.viewLiveTracking(${o.id})" class="btn-balance-details" style="background:#0284C7; color:#fff; border:none; padding:8px 14px; font-size:12px; cursor:pointer; border-radius:var(--radius-pill); display:inline-flex; align-items:center; gap:6px;">
+                                <i class="fas fa-map-location-dot"></i> Live GPS
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    },
+
+    // ============================================
+    // CATEGORIES MANAGEMENT (WORKING & INSTANT)
+    // ============================================
+    async loadCategories() {
+        const grid = document.getElementById('farmer-categories-grid');
+        if (!grid) return;
+
+        // Instant render if products exist in memory
+        if (this.allProducts && this.allProducts.length > 0) {
+            this.renderCategoriesGrid();
+            return;
+        }
+
+        const cached = sessionStorage.getItem('ff_farmer_prods');
+        if (cached) {
+            try {
+                this.allProducts = JSON.parse(cached);
+                this.renderCategoriesGrid();
+                return;
+            } catch(e) {}
+        }
+
+        grid.innerHTML = '<p style="text-align:center; padding:30px; color:var(--text-muted); grid-column:1/-1;"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Loading categories...</p>';
 
         try {
-            const filterEl = document.getElementById('order-filter');
-            const filter = filterEl ? filterEl.value : 'all';
-            const data = await API.orders.getFarmerOrders();
-
-            if (data && data.success && Array.isArray(data.orders) && data.orders.length > 0) {
-                let orders = data.orders;
-                if (filter !== 'all') {
-                    orders = orders.filter(o => o.status === filter);
-                }
-
-                if (orders.length === 0) {
-                    container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">No orders found for selected filter</p>';
-                    return;
-                }
-
-                const nextStageMap = {
-                    'pending': { next: 'confirmed', label: 'Confirm Order' },
-                    'confirmed': { next: 'preparing', label: 'Start Preparing' },
-                    'preparing': { next: 'ready', label: 'Mark Ready' },
-                    'ready': { next: 'out_for_delivery', label: 'Dispatch' },
-                    'out_for_delivery': { next: 'on_the_way', label: 'On The Way' },
-                    'on_the_way': { next: 'delivered', label: 'Mark Delivered' }
-                };
-
-                container.innerHTML = `<table class="orders-table">
-                    <thead>
-                        <tr>
-                            <th>Order #</th>
-                            <th>Customer & Delivery</th>
-                            <th>Items</th>
-                            <th>Total</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                            <th>Update Stage</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${orders.map(o => {
-                            const nextAction = nextStageMap[o.status];
-                            const itemsList = (o.items || []).map(i => `${i.product_name} (${i.quantity})`).join(', ') || `${o.item_count || 1} items`;
-                            const isReadyForDelivery = o.status === 'ready';
-                            const isInDelivery = ['out_for_delivery','on_the_way'].includes(o.status);
-                            return `<tr>
-                            <td><strong>${o.order_number||'#ORD-'+o.id}</strong></td>
-                            <td>
-                                <div style="font-weight:600; color:var(--text-dark);">${o.customer_name||'Customer'}</div>
-                                <div style="font-size:12px; color:var(--text-muted); max-width:220px; line-height:1.3; margin-top:2px;">
-                                    <i class="fas fa-map-marker-alt" style="color:var(--green-primary); margin-right:4px;"></i>${o.shipping_address || 'Standard Address'}
-                                </div>
-                            </td>
-                            <td style="font-size:13px; color:var(--text-body); max-width:180px;">${itemsList}</td>
-                            <td style="font-weight:600; color:var(--green-dark);">₹${parseFloat(o.total_amount||0).toFixed(2)}</td>
-                            <td><span class="status-badge-pill ${o.status||'pending'}">${(o.status||'pending').replace(/_/g, ' ').toUpperCase()}</span></td>
-                            <td style="font-size:12px; color:var(--text-muted);">${new Date(o.created_at||Date.now()).toLocaleDateString()}</td>
-                            <td>
-                                <div style="display:flex; flex-direction:column; gap:6px;">
-                                    <select onchange="farmer.updateOrderStatus(${o.id}, this.value)" class="sales-period-select" style="padding:5px 8px; font-size:12px; border-radius:6px; background:#fff; border:1px solid #D9D2C5;">
-                                        <option value="pending" ${o.status === 'pending' ? 'selected' : ''}>1. Order Placed</option>
-                                        <option value="confirmed" ${o.status === 'confirmed' ? 'selected' : ''}>2. Confirmed</option>
-                                        <option value="preparing" ${o.status === 'preparing' ? 'selected' : ''}>3. Preparing</option>
-                                        <option value="ready" ${o.status === 'ready' ? 'selected' : ''}>4. Ready</option>
-                                        <option value="out_for_delivery" ${o.status === 'out_for_delivery' ? 'selected' : ''}>5. Out for Delivery</option>
-                                        <option value="on_the_way" ${o.status === 'on_the_way' ? 'selected' : ''}>6. On the Way</option>
-                                        <option value="delivered" ${o.status === 'delivered' ? 'selected' : ''}>7. Delivered</option>
-                                        <option value="cancelled" ${o.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
-                                    </select>
-                                    ${nextAction ? `<button onclick="farmer.updateOrderStatus(${o.id}, '${nextAction.next}')" class="btn-primary" style="padding:4px 10px; font-size:11px; border-radius:4px; font-weight:600; cursor:pointer; background:var(--green-primary); color:#fff; border:none;">
-                                        <i class="fas fa-forward" style="font-size:10px; margin-right:4px;"></i>${nextAction.label}
-                                    </button>` : ''}
-                                    ${isReadyForDelivery ? `<button onclick="farmer.openAssignDeliveryModal(${o.id}, '${o.order_number||'ORD-'+o.id}')" style="padding:5px 10px; font-size:11px; border-radius:6px; font-weight:700; cursor:pointer; background:#F28C28; color:#fff; border:none; display:flex; align-items:center; gap:5px;">
-                                        <i class="fas fa-motorcycle"></i> Assign Delivery
-                                    </button>` : ''}
-                                    ${isInDelivery || isReadyForDelivery ? `<button onclick="farmer.viewLiveTracking(${o.id})" style="padding:5px 10px; font-size:11px; border-radius:6px; font-weight:700; cursor:pointer; background:#0284C7; color:#fff; border:none; display:flex; align-items:center; gap:5px;">
-                                        <i class="fas fa-map-location-dot"></i> Live Tracking
-                                    </button>` : ''}
-                                </div>
-                            </td>
-                        </tr>`;
-                        }).join('')}
-                    </tbody>
-                </table>`;
-            } else {
-                container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">No customer orders yet</p>';
+            const pData = await API.products.getFarmerProducts();
+            if (pData && pData.success && Array.isArray(pData.products)) {
+                this.allProducts = pData.products;
+                sessionStorage.setItem('ff_farmer_prods', JSON.stringify(this.allProducts));
             }
+            this.renderCategoriesGrid();
         } catch (error) {
-            console.error('Error loading orders:', error);
-            container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Failed to load orders</p>';
+            console.error('Error loading categories:', error);
+            grid.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:30px; grid-column:1/-1;">Failed to load categories</p>';
+        }
+    },
+
+    renderCategoriesGrid() {
+        const grid = document.getElementById('farmer-categories-grid');
+        if (!grid) return;
+
+        const standardCategories = [
+            { name: 'Vegetables', icon: 'fa-carrot', color: '#D97706', bg: '#FEF3C7', desc: 'Root crops, vine vegetables, and organic garden picks' },
+            { name: 'Fruits', icon: 'fa-apple-whole', color: '#DC2626', bg: '#FEE2E2', desc: 'Tree-ripened orchard fruits and berry harvests' },
+            { name: 'Leafy Greens', icon: 'fa-leaf', color: '#16A34A', bg: '#DCFCE7', desc: 'Fresh tender spinach, kale, lettuce, and herbs' },
+            { name: 'Organic', icon: 'fa-seedling', color: '#355C24', bg: '#EAF0DF', desc: 'Zero pesticide chemical-free certified produce' },
+            { name: 'Dairy & Farm Fresh', icon: 'fa-cow', color: '#2563EB', bg: '#DBEAFE', desc: 'Farm bottled milk, free-range eggs, and butter' },
+            { name: 'Grains & Pulses', icon: 'fa-wheat-awn', color: '#B45309', bg: '#FDE68A', desc: 'Locally grown whole grains, pulses, and seeds' },
+            { name: 'Herbs & Seasoning', icon: 'fa-spa', color: '#059669', bg: '#D1FAE5', desc: 'Aromatic farm herbs, fresh mint, coriander, and spices' }
+        ];
+
+        const foundCats = [...new Set((this.allProducts || []).map(p => p.category).filter(Boolean))];
+        foundCats.forEach(c => {
+            if (!standardCategories.some(sc => sc.name.toLowerCase() === c.toLowerCase())) {
+                standardCategories.push({
+                    name: c,
+                    icon: 'fa-tags',
+                    color: '#6F9638',
+                    bg: '#EAF0DF',
+                    desc: 'Specialty harvest category'
+                });
+            }
+        });
+
+        // Calculate metrics per category
+        let topCat = 'Vegetables';
+        let maxCount = 0;
+        let totalUnits = 0;
+
+        const enriched = standardCategories.map(cat => {
+            const prods = (this.allProducts || []).filter(p => (p.category || '').toLowerCase() === cat.name.toLowerCase());
+            const count = prods.length;
+            const stock = prods.reduce((sum, p) => sum + (p.quantity || 0), 0);
+            const sold = prods.reduce((sum, p) => sum + (p.total_sold || 0), 0);
+            totalUnits += stock;
+            if (count > maxCount) {
+                maxCount = count;
+                topCat = cat.name;
+            }
+            return { ...cat, count, stock, sold };
+        });
+
+        // Update KPI cards
+        const elCount = document.getElementById('cat-kpi-count');
+        if (elCount) elCount.textContent = enriched.filter(c => c.count > 0).length || enriched.length;
+        const elTop = document.getElementById('cat-kpi-top');
+        if (elTop) elTop.textContent = topCat;
+        const elUnits = document.getElementById('cat-kpi-units');
+        if (elUnits) elUnits.textContent = totalUnits;
+
+        grid.innerHTML = enriched.map(c => `
+            <div class="category-card-pro">
+                <div class="cat-card-header">
+                    <div class="cat-card-icon" style="background:${c.bg}; color:${c.color};">
+                        <i class="fas ${c.icon}"></i>
+                    </div>
+                    <div>
+                        <div class="cat-card-title">${c.name}</div>
+                        <div style="font-size:11.5px; color:var(--text-muted);">${c.count} listed produce</div>
+                    </div>
+                </div>
+                <p style="font-size:12px; color:var(--text-muted); line-height:1.4; margin-bottom:14px;">
+                    ${c.desc}
+                </p>
+                <div class="cat-card-stats">
+                    <div>
+                        <div class="cat-card-stat-val">${c.stock}</div>
+                        <div class="cat-card-stat-lbl">In-Stock Units</div>
+                    </div>
+                    <div>
+                        <div class="cat-card-stat-val">${c.sold}</div>
+                        <div class="cat-card-stat-lbl">Total Sold</div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:auto;">
+                    <button class="btn-balance-details" onclick="farmer.filterByCategory('${c.name}')" style="flex:1; background:var(--cream); border:1px solid var(--beige-mid); padding:7px; font-size:11.5px; cursor:pointer; border-radius:var(--radius-pill);">
+                        <i class="fas fa-filter"></i> View Crops
+                    </button>
+                    <button class="btn-balance-details" onclick="farmer.prepareAddProductCategory('${c.name}')" style="flex:1; background:var(--green-pale); border:1px solid var(--green-soft); color:var(--green-primary); padding:7px; font-size:11.5px; font-weight:700; cursor:pointer; border-radius:var(--radius-pill);">
+                        <i class="fas fa-plus"></i> Add Crop
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    },
+
+    filterByCategory(catName) {
+        this.showPage('products');
+        setTimeout(() => {
+            const select = document.getElementById('prod-filter-category');
+            if (select) {
+                select.value = catName;
+                this.filterProducts();
+            }
+        }, 100);
+    },
+
+    prepareAddProductCategory(catName) {
+        this.showPage('products');
+        setTimeout(() => {
+            this.showAddProductForm();
+            const select = document.getElementById('product-category');
+            if (select) {
+                if (![...select.options].some(o => o.value.toLowerCase() === catName.toLowerCase())) {
+                    select.add(new Option(catName, catName));
+                }
+                select.value = catName;
+            }
+        }, 100);
+    },
+
+    showAddCategoryModal() {
+        const catName = prompt('Enter New Category Name (e.g. Exotic Microgreens, Berries, Honey & Jams):');
+        if (catName && catName.trim()) {
+            const cleanName = catName.trim();
+            const select = document.getElementById('product-category');
+            if (select && ![...select.options].some(o => o.value.toLowerCase() === cleanName.toLowerCase())) {
+                select.add(new Option(cleanName, cleanName));
+            }
+            if (typeof toast !== 'undefined') toast.success(`Category "${cleanName}" ready for listings!`);
+            this.loadCategories();
+        }
+    },
+
+    // ============================================
+    // CUSTOMER REVIEWS (WORKING & INSTANT)
+    // ============================================
+    allReviews: [],
+
+    async fetchReviewsInBackground() {
+        if (this._fetchingReviews) return;
+        this._fetchingReviews = true;
+        try {
+            const data = await API.user.getFarmerReviews();
+            if (data && data.success) {
+                this.allReviews = Array.isArray(data.reviews) ? data.reviews : [];
+                sessionStorage.setItem('ff_farmer_reviews', JSON.stringify(this.allReviews));
+                sessionStorage.setItem('ff_farmer_reviews_meta', JSON.stringify({
+                    averageRating: data.averageRating,
+                    totalReviews: data.totalReviews,
+                    ratingCounts: data.ratingCounts
+                }));
+                if (this.currentPage === 'reviews') {
+                    this.applyReviewsData(data);
+                }
+            }
+        } catch(e) {
+        } finally {
+            this._fetchingReviews = false;
+        }
+    },
+
+    applyReviewsData(data) {
+        this.allReviews = Array.isArray(data.reviews) ? data.reviews : [];
+        const avg = parseFloat(data.averageRating || 0).toFixed(1);
+        const total = data.totalReviews || 0;
+        const counts = data.ratingCounts || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+        const elAvg = document.getElementById('review-hero-avg');
+        if (elAvg) elAvg.textContent = total > 0 ? avg : '5.0';
+        const elCnt = document.getElementById('review-hero-count');
+        if (elCnt) elCnt.textContent = total;
+
+        for (let s = 1; s <= 5; s++) {
+            const c = counts[s] || 0;
+            const pct = total > 0 ? Math.round((c / total) * 100) : (s === 5 ? 100 : 0);
+            const bar = document.getElementById(`star-bar-${s}`);
+            if (bar) bar.style.width = pct + '%';
+            const num = document.getElementById(`star-count-${s}`);
+            if (num) num.textContent = c;
+        }
+
+        const prodSelect = document.getElementById('review-filter-product');
+        if (prodSelect) {
+            const prods = [...new Map(this.allReviews.map(r => [r.product_id, r.product_name])).entries()];
+            prodSelect.innerHTML = '<option value="all">All Farm Produce</option>' +
+                prods.map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
+        }
+
+        this.filterReviews();
+    },
+
+    async loadReviews() {
+        const feed = document.getElementById('farmer-reviews-feed');
+        if (!feed) return;
+
+        // Instant render if reviews exist in memory
+        if (this.allReviews && this.allReviews.length > 0) {
+            const cachedMeta = sessionStorage.getItem('ff_farmer_reviews_meta');
+            if (cachedMeta) {
+                try {
+                    const meta = JSON.parse(cachedMeta);
+                    this.applyReviewsData({ ...meta, reviews: this.allReviews });
+                } catch(e) {}
+            }
+            this.fetchReviewsInBackground();
+            return;
+        }
+
+        const cachedReviews = sessionStorage.getItem('ff_farmer_reviews');
+        const cachedMeta = sessionStorage.getItem('ff_farmer_reviews_meta');
+        if (cachedReviews && cachedMeta) {
+            try {
+                this.allReviews = JSON.parse(cachedReviews);
+                const meta = JSON.parse(cachedMeta);
+                this.applyReviewsData({ ...meta, reviews: this.allReviews });
+                this.fetchReviewsInBackground();
+                return;
+            } catch(e) {}
+        }
+
+        feed.innerHTML = '<p style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Loading feedback...</p>';
+        await this.fetchReviewsInBackground();
+    },
+
+    filterReviews() {
+        const feed = document.getElementById('farmer-reviews-feed');
+        if (!feed) return;
+
+        const starFilter = document.getElementById('review-filter-stars');
+        const star = starFilter ? starFilter.value : 'all';
+        const prodFilter = document.getElementById('review-filter-product');
+        const prodId = prodFilter ? prodFilter.value : 'all';
+
+        let list = [...this.allReviews];
+
+        if (star !== 'all') {
+            list = list.filter(r => r.rating == star);
+        }
+
+        if (prodId !== 'all') {
+            list = list.filter(r => r.product_id == prodId);
+        }
+
+        if (list.length === 0) {
+            feed.innerHTML = `
+                <div style="text-align:center; padding:60px 20px; background:var(--white); border-radius:18px; border:1px dashed var(--beige-mid);">
+                    <div style="width:64px; height:64px; background:#FEF3C7; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; color:#D97706; font-size:26px;">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <h3 style="font-family:var(--font-serif); font-size:20px; color:var(--text-dark); margin-bottom:6px;">No customer reviews yet</h3>
+                    <p style="font-size:13px; color:var(--text-muted); max-width:420px; margin:0 auto;">
+                        When customers receive their fresh farm delivery, their verified feedback and ratings will appear here.
+                    </p>
+                </div>`;
+            return;
+        }
+
+        feed.innerHTML = list.map(r => {
+            const stars = Array.from({ length: 5 }, (_, i) => 
+                `<i class="fas fa-star" style="color:${i < r.rating ? '#F59E0B' : '#E5DEC8'}; font-size:13px;"></i>`
+            ).join('');
+            const dateStr = new Date(r.created_at || Date.now()).toLocaleDateString('en-IN', {
+                day: 'numeric', month: 'short', year: 'numeric'
+            });
+            const initials = (r.customer_name || 'Customer').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            const fallback = this.getProduceFallback(r.product_name);
+
+            return `
+            <div class="review-card-pro">
+                <div class="review-card-top">
+                    <div class="review-cust-info">
+                        <div class="review-cust-avatar">${initials}</div>
+                        <div>
+                            <div style="font-weight:700; color:var(--text-dark); font-size:14px; display:flex; align-items:center; gap:6px;">
+                                ${r.customer_name || 'Verified Customer'}
+                                <span style="font-size:10px; font-weight:700; color:#16A34A; background:#DCFCE7; padding:2px 6px; border-radius:var(--radius-pill);"><i class="fas fa-check-circle"></i> Verified Buyer</span>
+                            </div>
+                            <div style="font-size:11.5px; color:var(--text-muted);">${dateStr}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:4px;">
+                        ${stars}
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                    <img src="${r.product_image || fallback}" alt="" style="width:24px; height:24px; border-radius:6px; object-fit:cover;" onerror="this.onerror=null;this.src='${fallback}';">
+                    <span style="font-size:12px; font-weight:600; color:var(--text-dark);">${r.product_name}</span>
+                </div>
+                <p style="font-size:13.5px; color:var(--text-dark); line-height:1.5;">
+                    "${r.comment || 'Produce arrived crisp, fresh, and cleanly packaged!'}"
+                </p>
+            </div>`;
+        }).join('');
+    },
+
+    // ============================================
+    // REPORTS & ANALYTICS (WITH TIMEFRAME FILTERS)
+    // ============================================
+    reportsTimeframe: '1_month',
+
+    getOrdersForTimeframe(timeframe = '1_month') {
+        const orders = this.allOrders || [];
+        if (timeframe === 'all') return orders;
+
+        const now = new Date();
+        let cutoff = new Date(0);
+
+        if (timeframe === 'today') {
+            cutoff = new Date();
+            cutoff.setHours(0, 0, 0, 0);
+        } else if (timeframe === '1_month') {
+            cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        } else if (timeframe === '3_months') {
+            cutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        } else if (timeframe === '6_months') {
+            cutoff = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+        } else if (timeframe === '1_year') {
+            cutoff = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        }
+
+        return orders.filter(o => new Date(o.created_at || Date.now()) >= cutoff);
+    },
+
+    setReportsTimeframe(timeframe) {
+        this.reportsTimeframe = timeframe;
+
+        // Update active tab buttons
+        document.querySelectorAll('#reports-timeframe-tabs .view-switch-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.timeframe === timeframe);
+        });
+
+        // Update label and badge
+        const now = new Date();
+        const lblEl = document.getElementById('reports-timeframe-label');
+        const pillEl = document.getElementById('reports-timeframe-pill');
+
+        const map = {
+            'today': {
+                label: `Showing: Today (${now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })})`,
+                pill: 'Today Detail'
+            },
+            '1_month': {
+                label: 'Showing: Last 30 Days',
+                pill: '1 Month Detail'
+            },
+            '3_months': {
+                label: 'Showing: Last 90 Days (Quarterly)',
+                pill: '3 Months Detail'
+            },
+            '6_months': {
+                label: 'Showing: Last 180 Days (Half-Year)',
+                pill: '6 Months Detail'
+            },
+            '1_year': {
+                label: 'Showing: Last 365 Days (Annual)',
+                pill: '1 Year Detail'
+            },
+            'all': {
+                label: 'Showing: All-Time Lifetime Performance',
+                pill: 'All Time'
+            }
+        };
+
+        if (map[timeframe]) {
+            if (lblEl) lblEl.textContent = map[timeframe].label;
+            if (pillEl) pillEl.textContent = map[timeframe].pill;
+        }
+
+        // 0ms instantaneous local render from in-memory orders
+        const periodOrders = this.getOrdersForTimeframe(timeframe);
+        this.applyReportsData(null, periodOrders, timeframe);
+
+        // Background server fetch to sync exact server ledger
+        API.orders.getFarmerStats(timeframe).then(res => {
+            if (res && res.success && res.stats) {
+                this.applyReportsData(res.stats, periodOrders, timeframe);
+            }
+        }).catch(() => {});
+    },
+
+    async loadReports() {
+        const tf = this.reportsTimeframe || '1_month';
+
+        // Update active button state
+        document.querySelectorAll('#reports-timeframe-tabs .view-switch-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.timeframe === tf);
+        });
+
+        // Cache-first instant 0ms paint
+        const periodOrders = this.getOrdersForTimeframe(tf);
+        const cachedStats = sessionStorage.getItem(`ff_farmer_stats_${tf}`) || sessionStorage.getItem('ff_farmer_stats');
+        if (cachedStats || periodOrders.length > 0) {
+            try {
+                const s = cachedStats ? JSON.parse(cachedStats) : null;
+                this.applyReportsData(s, periodOrders, tf);
+            } catch(e) {}
+        }
+
+        try {
+            const [statsRes, ordersRes] = await Promise.all([
+                API.orders.getFarmerStats(tf),
+                API.orders.getFarmerOrders()
+            ]);
+
+            const stats = (statsRes && statsRes.success) ? statsRes.stats : {};
+            const orders = (ordersRes && ordersRes.success && Array.isArray(ordersRes.orders)) ? ordersRes.orders : [];
+            this.allOrders = orders;
+            sessionStorage.setItem(`ff_farmer_stats_${tf}`, JSON.stringify(stats));
+            sessionStorage.setItem('ff_farmer_orders', JSON.stringify(orders));
+
+            const freshPeriodOrders = this.getOrdersForTimeframe(tf);
+            this.applyReportsData(stats, freshPeriodOrders, tf);
+        } catch (error) {
+            console.error('Error loading reports:', error);
+        }
+    },
+
+    applyReportsData(stats = null, orders = [], timeframe = '1_month') {
+        const validOrders = (orders || []).filter(o => o.status !== 'cancelled');
+        const cancelledOrders = (orders || []).filter(o => o.status === 'cancelled');
+
+        // Financial KPIs: prefer server aggregate if stats passed, or calculate from period orders
+        let rev = 0;
+        let completed = 0;
+        if (stats && typeof stats.totalRevenue === 'number') {
+            rev = stats.totalRevenue;
+            completed = stats.completedOrders || 0;
+        } else {
+            rev = validOrders.reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
+            completed = orders.filter(o => o.status === 'delivered').length;
+        }
+
+        const aov = completed > 0 ? (rev / completed) : (validOrders.length > 0 ? (rev / validOrders.length) : 0);
+        
+        // Total units sold in this period
+        let unitsSold = 0;
+        validOrders.forEach(o => {
+            if (Array.isArray(o.items)) {
+                o.items.forEach(i => unitsSold += (parseInt(i.quantity) || 0));
+            }
+        });
+
+        // Current Inventory Asset Valuation
+        let invVal = 0;
+        if (this.allProducts && this.allProducts.length > 0) {
+            invVal = this.allProducts.reduce((sum, p) => sum + (parseFloat(p.price || 0) * (p.quantity || 0)), 0);
+        }
+
+        const elRev = document.getElementById('report-kpi-revenue');
+        if (elRev) elRev.textContent = '₹' + rev.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const elOrd = document.getElementById('report-kpi-orders');
+        if (elOrd) elOrd.textContent = completed;
+        const elAov = document.getElementById('report-kpi-aov');
+        if (elAov) elAov.textContent = '₹' + aov.toFixed(2);
+        const elUnits = document.getElementById('report-kpi-units');
+        if (elUnits) elUnits.textContent = unitsSold;
+        const elInv = document.getElementById('report-kpi-inventory');
+        if (elInv) elInv.textContent = '₹' + invVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const elCan = document.getElementById('report-kpi-cancelled');
+        if (elCan) elCan.textContent = cancelledOrders.length;
+
+        // Render Leaderboard for this specific timeframe
+        const tbody = document.getElementById('reports-top-products-tbody');
+        if (tbody) {
+            // Aggregate sales per product for this specific period
+            const prodSalesMap = {};
+            validOrders.forEach(o => {
+                if (Array.isArray(o.items)) {
+                    o.items.forEach(i => {
+                        const pid = i.product_id;
+                        if (!prodSalesMap[pid]) {
+                            const found = (this.allProducts || []).find(p => p.id == pid);
+                            prodSalesMap[pid] = {
+                                id: pid,
+                                name: i.product_name || found?.name || 'Produce Item',
+                                category: found?.category || 'General',
+                                price: parseFloat(i.unit_price || found?.price || 0),
+                                image_url: found?.image_url || null,
+                                quantity: found?.quantity || 0,
+                                is_available: found?.is_available !== false,
+                                total_sold: 0,
+                                total_revenue: 0
+                            };
+                        }
+                        const q = parseInt(i.quantity) || 0;
+                        prodSalesMap[pid].total_sold += q;
+                        prodSalesMap[pid].total_revenue += parseFloat(i.subtotal || (q * (parseFloat(i.unit_price) || 0)));
+                    });
+                }
+            });
+
+            let topList = Object.values(prodSalesMap).sort((a, b) => b.total_sold - a.total_sold || b.total_revenue - a.total_revenue);
+
+            if (topList.length === 0) {
+                if (stats && Array.isArray(stats.topProducts) && stats.topProducts.length > 0) {
+                    topList = stats.topProducts;
+                } else if (orders.length === 0 && this.allProducts && this.allProducts.length > 0) {
+                    topList = this.allProducts.slice(0, 5);
+                }
+            }
+
+            if (topList.length > 0) {
+                tbody.innerHTML = topList.map((p, idx) => {
+                    const fallback = this.getProduceFallback(p.name);
+                    const sold = p.total_sold || 0;
+                    const pRev = (p.total_revenue != null ? parseFloat(p.total_revenue) : (sold * parseFloat(p.price || 0))).toFixed(2);
+                    const isAvail = p.is_available !== false;
+                    return `
+                    <tr>
+                        <td><strong style="color:var(--text-muted);">#${idx + 1}</strong></td>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <img src="${p.image_url || fallback}" style="width:36px; height:36px; border-radius:8px; object-fit:cover;" onerror="this.onerror=null;this.src='${fallback}';">
+                                <strong style="color:var(--text-dark);">${p.name}</strong>
+                            </div>
+                        </td>
+                        <td><span style="font-size:11.5px; font-weight:600; color:var(--orange);">${p.category || 'General'}</span></td>
+                        <td>₹${parseFloat(p.price || 0).toFixed(2)}</td>
+                        <td><strong>${sold}</strong> units</td>
+                        <td><strong style="color:var(--green-primary);">₹${pRev}</strong></td>
+                        <td>${p.quantity || 0}</td>
+                        <td><span class="status-badge-pill ${isAvail ? 'delivered' : 'cancelled'}">${isAvail ? 'Active' : 'Hidden'}</span></td>
+                    </tr>`;
+                }).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-calendar-xmark" style="margin-right:6px;"></i>No crop sales recorded for this timeframe</td></tr>';
+            }
+        }
+
+        // Render Charts
+        this.renderReportsCharts(stats, orders, timeframe);
+    },
+
+    renderReportsCharts(stats, orders = [], timeframe = '1_month') {
+        if (typeof Chart === 'undefined') return;
+
+        // Sales Trend Chart
+        const salesCanvas = document.getElementById('chart-reports-sales');
+        if (salesCanvas) {
+            const ctx = salesCanvas.getContext('2d');
+            if (this.reportChartSales) this.reportChartSales.destroy();
+
+            let labels = [];
+            let dataPts = [];
+
+            if (stats && Array.isArray(stats.salesByDate) && stats.salesByDate.length > 0) {
+                labels = stats.salesByDate.map(d => {
+                    const raw = d.order_date || d.date;
+                    const parsed = new Date(raw);
+                    return isNaN(parsed.getTime()) ? String(raw) : parsed.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                });
+                dataPts = stats.salesByDate.map(d => parseFloat(d.revenue || d.sales || 0));
+            } else {
+                // Compute from period orders
+                const validOrders = (orders || []).filter(o => o.status !== 'cancelled');
+                if (timeframe === 'today') {
+                    // Hourly buckets
+                    const hoursMap = {};
+                    validOrders.forEach(o => {
+                        const d = new Date(o.created_at || Date.now());
+                        const h = d.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
+                        hoursMap[h] = (hoursMap[h] || 0) + parseFloat(o.total_amount || 0);
+                    });
+                    labels = Object.keys(hoursMap);
+                    dataPts = Object.values(hoursMap);
+                    if (labels.length === 0) {
+                        labels = ['Morning', 'Noon', 'Evening'];
+                        dataPts = [0, 0, 0];
+                    }
+                } else {
+                    // Daily buckets
+                    const dateMap = {};
+                    validOrders.forEach(o => {
+                        const d = new Date(o.created_at || Date.now());
+                        const dtStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                        dateMap[dtStr] = (dateMap[dtStr] || 0) + parseFloat(o.total_amount || 0);
+                    });
+                    labels = Object.keys(dateMap);
+                    dataPts = Object.values(dateMap);
+                    if (labels.length === 0) {
+                        labels = [new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })];
+                        dataPts = [0];
+                    }
+                }
+            }
+
+            this.reportChartSales = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Gross Sales (₹)',
+                        data: dataPts,
+                        borderColor: '#355C24',
+                        backgroundColor: 'rgba(53, 92, 36, 0.08)',
+                        tension: 0.35,
+                        fill: true,
+                        pointBackgroundColor: '#355C24',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => ` Revenue: ₹${parseFloat(context.raw || 0).toFixed(2)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#EEE9DA' },
+                            ticks: {
+                                callback: (val) => '₹' + val
+                            }
+                        },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // Order Status Mix Doughnut
+        const statusCanvas = document.getElementById('chart-reports-status');
+        if (statusCanvas) {
+            const ctx = statusCanvas.getContext('2d');
+            if (this.reportChartStatus) this.reportChartStatus.destroy();
+
+            const deliveredCount = orders.filter(o => o.status === 'delivered').length;
+            const transitCount = orders.filter(o => ['out_for_delivery', 'on_the_way'].includes(o.status)).length;
+            const prepCount = orders.filter(o => ['confirmed', 'preparing', 'ready'].includes(o.status)).length;
+            const pendingCount = orders.filter(o => o.status === 'pending').length;
+            const cancelledCount = orders.filter(o => o.status === 'cancelled').length;
+
+            const labels = [];
+            const dataPts = [];
+            const bgColors = [];
+
+            if (deliveredCount > 0) { labels.push('Delivered'); dataPts.push(deliveredCount); bgColors.push('#355C24'); }
+            if (transitCount > 0) { labels.push('In Transit'); dataPts.push(transitCount); bgColors.push('#0284C7'); }
+            if (prepCount > 0) { labels.push('Preparing'); dataPts.push(prepCount); bgColors.push('#F28C28'); }
+            if (pendingCount > 0) { labels.push('Pending'); dataPts.push(pendingCount); bgColors.push('#F59E0B'); }
+            if (cancelledCount > 0) { labels.push('Cancelled'); dataPts.push(cancelledCount); bgColors.push('#EF4444'); }
+
+            if (labels.length === 0) {
+                labels.push('No Orders in Period');
+                dataPts.push(1);
+                bgColors.push('#E5DEC8');
+            }
+
+            this.reportChartStatus = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels,
+                    datasets: [{
+                        data: dataPts,
+                        backgroundColor: bgColors,
+                        borderWidth: 2,
+                        borderColor: '#FFFFFF'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+    },
+
+    exportCSV() {
+        const tf = this.reportsTimeframe || 'all';
+        const orders = this.getOrdersForTimeframe(tf);
+        if (orders.length === 0) {
+            if (typeof toast !== 'undefined') toast.info(`No order data found for ${tf.replace('_', ' ')} to export`);
+            return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Date,Order ID,Customer Name,Phone,Delivery Address,Items,Total Amount (INR),Payment Status,Order Status\n";
+
+        orders.forEach(o => {
+            const date = new Date(o.created_at || Date.now()).toISOString().split('T')[0];
+            const orderId = (o.order_number || ('ORD-' + o.id)).replace(/,/g, '');
+            const cust = (o.customer_name || 'Customer').replace(/,/g, '');
+            const phone = (o.customer_phone || '').replace(/,/g, '');
+            const addr = `"${(o.shipping_address || '').replace(/"/g, '""')}"`;
+            const items = `"${(o.items || []).map(i => `${i.product_name} (${i.quantity})`).join('; ')}"`;
+            const amt = parseFloat(o.total_amount || 0).toFixed(2);
+            const pay = o.payment_status || 'pending';
+            const stat = o.status || 'pending';
+
+            csvContent += `${date},${orderId},${cust},${phone},${addr},${items},${amt},${pay},${stat}\n`;
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `freshfield_report_${tf}_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        if (typeof toast !== 'undefined') {
+            toast.success(`Exported ${orders.length} order records for ${tf.replace('_', ' ')}!`, 'CSV Downloaded');
         }
     },
 
@@ -1428,13 +2331,30 @@ const farmer = {
         if (typeof L === 'undefined') {
             const cssLink = document.createElement('link');
             cssLink.rel = 'stylesheet';
-            cssLink.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+            cssLink.href = 'css/vendor/leaflet.css';
             document.head.appendChild(cssLink);
 
             await new Promise((resolve) => {
                 const script = document.createElement('script');
-                script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                script.src = 'js/vendor/leaflet.js';
                 script.onload = resolve;
+                script.onerror = () => {
+                    const fallback = document.createElement('script');
+                    fallback.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                    fallback.onload = resolve;
+                    fallback.onerror = resolve;
+                    document.head.appendChild(fallback);
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        if (typeof io === 'undefined') {
+            await new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = 'http://localhost:5000/socket.io/socket.io.js';
+                script.onload = resolve;
+                script.onerror = resolve;
                 document.head.appendChild(script);
             });
         }
